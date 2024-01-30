@@ -1,0 +1,857 @@
+[Ch.06 실전 프로젝트 5 : 상품 주문 개발]
+
+1. User Order DB 설계
+
+----------------------------------------------------------------------------------------------------------------------
+1. Workbench에 ERD 작성
+	- user(1) : user_order(N)
+	- user_order(1) : user_order_menu(N)
+	- user_order_menu(N) : store_menu(1)
+	- store(1) : store_menu(N)
+
+	(1) user_order 테이블
+	
+		CREATE TABLE IF NOT EXISTS `delivery`.`user_order` (
+		  `id` BIGINT(32) NOT NULL AUTO_INCREMENT,
+		  `user_id` BIGINT(32) NOT NULL,
+		  `status` VARCHAR(50) NOT NULL,
+		  `amount` DECIMAL(11,4) NOT NULL,
+		  `ordered_at` DATETIME NULL,
+		  `accepted_at` DATETIME NULL,
+		  `cooking_started_at` DATETIME NULL,
+		  `delivery_started_at` DATETIME NULL,
+		  `received_at` DATETIME NULL,
+		  PRIMARY KEY (`id`),
+		  INDEX `idx_user_id` (`user_id` ASC) VISIBLE
+		)
+		ENGINE = InnoDB;
+
+		SELECT * FROM user_order;
+	
+	(2) user_order_menu 테이블 (user_order와 store_menu를 매핑해주는 테이블)
+	
+		CREATE TABLE IF NOT EXISTS `user_order_menu` (
+		  `id` BIGINT(32) NOT NULL AUTO_INCREMENT,
+		  `user_order_id` BIGINT(32) NOT NULL,
+		  `store_menu_id` BIGINT(32) NOT NULL,
+		  `status` VARCHAR(50) NOT NULL,
+		  PRIMARY KEY (`id`),
+		  INDEX `idx_user_order_id` (`user_order_id` ASC) VISIBLE,
+		  INDEX `idx_store_menu_id` (`store_menu_id` ASC) VISIBLE
+		)
+		ENGINE = InnoDB;
+
+		SELECT * FROM user_order_menu;
+
+2. User Order 서비스 로직 개발 - 1
+	※ 고객이 장바구니에 담는 로직은 쿠키 등 여러 방법이 있지만, 여기서는 구현 X
+	
+	(1) db.userorder.enums 에 UserOrderStatus 이넘 생성
+		- lombok 사용시 어노테이션, lombok 미사용시 아래 생성자 코드 추가
+
+		@AllArgsConstructor
+		public enum UserOrderStatus {
+			
+			REGISTERED("등록"),
+			UNREGISTERED("해지"),
+			;
+			
+		/*    UserOrderStatus(String description) {
+				this.description = description;
+			}*/
+			private String description;
+		}
+
+	(2) db.userorder 에 UserOrderEntity 클래스 생성
+
+		@Data
+		@NoArgsConstructor
+		@AllArgsConstructor
+		@EqualsAndHashCode(callSuper = true)
+		@SuperBuilder
+		@Entity
+		@Table(name = "user_order")
+		public class UserOrderEntity extends BaseEntity {
+
+			@Column(nullable = false)
+			private Long userId; // user : user_order = 1 : n
+			
+			@Column(nullable = false)
+			private Long storeId;
+			
+			@Enumerated(EnumType.STRING)
+			@Column(length = 50, nullable = false)
+			private UserOrderStatus status;
+			
+			@Column(precision = 11, scale = 4, nullable = false)
+			private BigDecimal amount;
+			
+			private LocalDateTime orderedAt;
+			
+			private LocalDateTime acceptedAt;
+			
+			private LocalDateTime cookingStartAt;
+			
+			private LocalDateTime deliveryStartedAt;
+			
+			private LocalDateTime receivedAt;
+		}
+
+	(3) db.userorder 에 UserOrderRepository 인터페이스 생성
+	
+		public interface UserOrderRepository extends JpaRepository<UserOrderEntity, Long> {
+		}
+
+	(4) db.userordermenu.enums 에 UserOrderMenuStatus 이넘 생성
+		- 위의 userorder 패키지의 enums 폴더 복/붙 후 이름변경
+		
+		@AllArgsConstructor
+		public enum UserOrderMenuStatus {
+			
+			REGISTERED("등록"),
+			UNREGISTERED("해지"),
+			;
+			
+		/*    UserOrderStatus(String description) {
+				this.description = description;
+			}*/
+			private String description;
+		}
+
+	(5) db.userordermenu 에 UserOrderMenuEntity 생성
+
+		@Data
+		@NoArgsConstructor
+		@AllArgsConstructor
+		@SuperBuilder
+		@EqualsAndHashCode(callSuper = true)
+		@Entity
+		@Table(name = "user_order_menu")
+		public class UserOrderMenuEntity extends BaseEntity {
+			
+			@Column(nullable = false)
+			private Long userOrderId; // user_order : user_order_menu = 1 : n
+			
+			@Column(nullable = false)
+			private Long storeMenuId; // store : user_order_menu = 1 : n
+			
+			@Enumerated(EnumType.STRING)
+			@Column(length = 50, nullable = false)
+			private UserOrderMenuStatus status;
+		}
+
+	(6) db.userordermenu 에 UserOrderMenuRepository 인터페이스 생성
+	
+		public interface UserOrderMenuRepository extends JpaRepository<UserOrderMenuEntity, Long> {
+			
+			// 어떠한 주문을 했을 시 해당 주문아이디(userOrderId)가 존재하고,
+			// 그 주문아이디에 해당되는 등록된 모든 메뉴의 리스트를 리턴하는 메소드
+			// select * from user_order_menu where user_order_id = ? and status = ?
+			List<UserOrderMenuEntity> findAllByUserOrderIdAndStatus(Long userOrderId, UserOrderMenuStatus status);
+		}
+		
+		-> 어플리케이션 실행해서 되는지 확인!
+
+
+2. User Order 서비스 로직 개발 - 2
+	- DBeaver를 통해서 쿼리문 및 테스트 데이터 삽입
+
+	(1) api.domain.userordermenu.service 생성 후 UserOrderMenuService 클래스 생성
+	
+		@Service
+		@RequiredArgsConstructor
+		public class UserOrderMenuService {
+			
+			private final UserOrderMenuRepository userOrderMenuRepository;
+			
+			public List<UserOrderMenuEntity> getUserOrderMenu(Long userOrderId) {
+				return userOrderMenuRepository.findAllByUserOrderIdAndStatus(userOrderId, UserOrderMenuStatus.REGISTERED);
+			}
+		}
+		
+	(2) 가장 중요한 주문 로직 구현!!
+		- api.domain.userorder 패키지 하위에 business, controller, converter, service 패키지 생성
+		
+		1) db.userorder 에 UserOrderRepository 추가
+
+			public interface UserOrderRepository extends JpaRepository<UserOrderEntity, Long> {
+				
+				// 특정 유저의 모든 주문
+				// select * from user_order where user_id = ? and status = ? order by id desc
+				List<UserOrderEntity> findAllByUserIdAndStatusOrderByIdDesc(Long userId, UserOrderStatus status);
+				
+				// 특정 주문
+				// 특정 유저(id)를 찍고 들어왔을 때 주문이 유효한지(status), 특정 유저의 오더(userId)가 맞는지
+				// select * from user_order where id =? and status = ? and user_id = ?
+				Optional<UserOrderEntity> findAllByIdAndStatusAndUserId(Long id, UserOrderStatus status, Long userId);
+			}
+			
+		2) db.userorder.enums 에 UserOrderStatus 추가
+
+			@AllArgsConstructor
+			public enum UserOrderStatus {
+				
+				REGISTERED("등록"),
+				UNREGISTERED("해지"),
+				ORDER("주문"),
+				ACCEPT("확인"),
+				COOKING("요리중"),
+				DELIVERY("배달중"),
+				RECEIVE("완료"),
+				;
+				
+			/*    UserOrderStatus(String description) {
+					this.description = description;
+				}*/
+				private String description;
+			}
+			
+		3) db.userorder 에 UserOrderRepository 추가
+		
+			public interface UserOrderRepository extends JpaRepository<UserOrderEntity, Long> {
+				
+				// 특정 유저의 모든 주문
+				// select * from user_order where user_id = ? and status = ? order by id desc
+				List<UserOrderEntity> findAllByUserIdAndStatusOrderByIdDesc(Long userId, UserOrderStatus status);
+				
+				// select * from user_order where user_id = ? and status in (?,?, .. ) order by id desc
+				List<UserOrderEntity> findAllByUserIdAndStatusInOrderByIdDesc(Long userId, List<UserOrderStatus> status);
+				
+				// 특정 주문
+				// 특정 유저(id)를 찍고 들어왔을 때 주문이 유효한지(status), 특정 유저의 오더(userId)가 맞는지
+				// select * from user_order where id =? and status = ? and user_id = ?
+				Optional<UserOrderEntity> findAllByIdAndStatusAndUserId(Long id, UserOrderStatus status, Long userId);
+			}
+
+		4) api.domain.userorder.service 에 UserOrderService 작성
+
+			@Service
+			@RequiredArgsConstructor
+			public class UserOrderService {
+				
+				private final UserOrderRepository userOrderRepository;
+				
+				public UserOrderEntity getUserOrderWithThrow(
+					Long id,
+					Long userId
+				) {
+					return userOrderRepository.findAllByIdAndStatusAndUserId(id, UserOrderStatus.REGISTERED, userId)
+						.orElseThrow(() -> new ApiException(ErrorCode.NULL_POINT));
+				}
+				
+				// 특정 사용자의 모든 주문내역 조회
+				public List<UserOrderEntity> getUserOrderList(Long userId) {
+					return userOrderRepository.findAllByUserIdAndStatusOrderByIdDesc(userId, UserOrderStatus.REGISTERED);
+				}
+				
+				public List<UserOrderEntity> getUserOrderList(Long userId, List<UserOrderStatus> statusList) {
+					return userOrderRepository.findAllByUserIdAndStatusInOrderByIdDesc(userId, statusList);
+				}
+				
+				// 현재 진행중인 내역
+				public List<UserOrderEntity> current(Long userId) {
+					return getUserOrderList(
+						userId,
+						List.of(
+							UserOrderStatus.ORDER,
+							UserOrderStatus.COOKING,
+							UserOrderStatus.DELIVERY,
+							UserOrderStatus.ACCEPT
+						)
+					);
+				}
+				
+				// 과거 주문한 내역
+				public List<UserOrderEntity> history(Long userId) {
+					return getUserOrderList(
+						userId,
+						List.of(
+							UserOrderStatus.RECEIVE
+						)
+					);
+				}
+				
+				// 주문(create)
+				public UserOrderEntity order(
+					UserOrderEntity userOrderEntity
+				) {
+					return Optional.ofNullable(userOrderEntity)
+						.map(it -> {
+							it.setStatus(UserOrderStatus.ORDER);
+							it.setOrderedAt(LocalDateTime.now());
+							
+							return userOrderRepository.save(it);
+						})
+						.orElseThrow(() -> new ApiException(ErrorCode.NULL_POINT));
+				}
+				
+				// 상태 변경
+				public UserOrderEntity setStatus(UserOrderEntity userOrderEntity, UserOrderStatus status) {
+					userOrderEntity.setStatus(status);
+					return userOrderRepository.save(userOrderEntity);
+				}
+
+				// 주문 확인
+				public UserOrderEntity accept(UserOrderEntity userOrderEntity) {
+					userOrderEntity.setAcceptedAt(LocalDateTime.now());
+					return setStatus(userOrderEntity, UserOrderStatus.ACCEPT);
+				}
+				
+				// 조리 시작
+				public UserOrderEntity cooking(UserOrderEntity userOrderEntity) {
+					userOrderEntity.setCookingStartAt(LocalDateTime.now());
+					return setStatus(userOrderEntity, UserOrderStatus.COOKING);
+				}
+				
+				// 배달 시작
+				public UserOrderEntity delivery(UserOrderEntity userOrderEntity) {
+					userOrderEntity.setDeliveryStartedAt(LocalDateTime.now());
+					return setStatus(userOrderEntity, UserOrderStatus.DELIVERY);
+				}
+				
+				// 배달 완료
+				public UserOrderEntity receive(UserOrderEntity userOrderEntity) {
+					userOrderEntity.setReceivedAt(LocalDateTime.now());
+					return setStatus(userOrderEntity, UserOrderStatus.RECEIVE);
+				}
+			}
+
+
+3. User Order 서비스 로직 개발 - 3
+
+	(1) api.domain.userorder.business 에 UserOrderBusiness 클래스 생성
+	
+	(2) api.domain.userorder.controller.model 에 UseOrderRequest 클래스 생성
+
+		@Data
+		@NoArgsConstructor
+		@AllArgsConstructor
+		public class UserOrderRequest {
+			
+			// 주문
+			// 특정 사용자가 특정 메뉴를 주문
+			// 특정 사용자 => 로그인된 세션에 들어있는 사용자
+			// 특정 메뉴 id
+			
+			@NotNull
+			private List<Long> storeMenuId;
+		}
+		
+	(3) api.domain.userorder.controller 에 UserOrderApiController 클래스 생성
+
+		@RestController
+		@RequestMapping("/api/user-order")
+		@RequiredArgsConstructor
+		public class UserOrderApiController {
+			
+			private final UserOrderBusiness userOrderBusiness;
+			
+			// 사용자 주문
+			@PostMapping("")
+			public Api userOrder(
+				@Valid
+				@RequestBody Api<UserOrderRequest> userOrderRequest,
+				
+				@UserSession
+				User user
+			){
+				var response = userOrderBusiness.userOrder(
+					user,
+					userOrderRequest.getBody()
+				);
+				return Api.OK(response);
+			}
+		}
+		
+		-> alt+Enter 로 메소드 자동 생성.
+		
+	(4) api.domain.userorder.business 에 UserOrderBusiness 작성
+	
+		@RequiredArgsConstructor
+		@Business
+		public class UserOrderBusiness {
+			
+			private final UserOrderService userOrderService;
+			private final StoreMenuService storeMenuService;
+			
+			// 1. 사용자, 메뉴 id
+			// 2. userOrder 생성
+			// 3. userOrderMenu 생성
+			// 4. 응답 생성
+			public void userOrder(User user, UserOrderRequest body) {
+				var storeMenuEntity = storeMenuService.getStoreMenuWithThrow(body.getStoreMenuId());
+				
+			}
+		}
+		
+	(5) api.domain.userorder.converter 에 UserOrderConverter 생성
+
+		@Converter
+		public class UserOrderConverter {
+			
+			public UserOrderEntity toEntity(
+				User user,
+				List<StoreMenuEntity> storeMenuEntityList
+			) {
+				var totalAmount = storeMenuEntityList.stream()
+					.map(it -> it.getAmount())
+					.reduce(BigDecimal.ZERO, BigDecimal::add);
+				
+				return UserOrderEntity.builder()
+					.userId(user.getId())
+					.amount(totalAmount)
+					.build();
+			}
+		}
+		
+	(6) api.domain.userorder.business 에 UserOrderBusiness 추가
+
+		@RequiredArgsConstructor
+		@Business
+		public class UserOrderBusiness {
+			
+			private final UserOrderService userOrderService;
+			private final UserOrderConverter userOrderConverter;
+			private final StoreMenuService storeMenuService;
+			
+			// 1. 사용자, 메뉴 id
+			// 2. userOrder 생성
+			// 3. userOrderMenu 생성
+			// 4. 응답 생성
+			public void userOrder(User user, UserOrderRequest body) {
+				var storeMenuEntityList = body.getStoreMenuIdList()
+					.stream()
+					.map(it -> storeMenuService.getStoreMenuWithThrow(it))
+					.collect(Collectors.toList());
+				
+				var userOrderEntity = userOrderConverter.toEntity(user, storeMenuEntityList);
+				
+				// 주문
+				var newUserOrderEntity = userOrderService.order(userOrderEntity);
+				
+				// 매핑
+				
+			}
+		}
+		
+	(7) api.domain.userordermenu.service 에 UserOrderMenuService 추가
+
+		public class UserOrderMenuService {
+			
+			private final UserOrderMenuRepository userOrderMenuRepository;
+			
+			public List<UserOrderMenuEntity> getUserOrderMenu(Long userOrderId) {
+				return userOrderMenuRepository.findAllByUserOrderIdAndStatus(userOrderId, UserOrderMenuStatus.REGISTERED);
+			}
+			
+			public UserOrderMenuEntity order(
+				UserOrderMenuEntity userOrderMenuEntity
+			) {
+				return Optional.ofNullable(userOrderMenuEntity)
+					.map(it -> {
+						it.setStatus(UserOrderMenuStatus.REGISTERED);
+						return userOrderMenuRepository.save(it);
+					})
+					.orElseThrow(() -> new ApiException(ErrorCode.NULL_POINT));
+			}
+		}
+		
+	(8) api.domain.userordermenu.converter 에 UserOrderMenuConverter 생성
+
+		public class UserOrderMenuConverter {
+
+			public UserOrderMenuEntity toEntity(
+				UserOrderEntity userOrderEntity,
+				StoreMenuEntity storeMenuEntity
+			){
+				return UserOrderMenuEntity.builder()
+					.userOrderId(userOrderEntity.getId())
+					.storeMenuId(storeMenuEntity.getId())
+					.build();
+			}
+		}
+		
+	(9) api.domain.userorder.business 에 UserOrderBusiness 추가
+
+		public class UserOrderBusiness {
+			
+			private final UserOrderService userOrderService;
+			private final UserOrderConverter userOrderConverter;
+			private final StoreMenuService storeMenuService;
+			private final UserOrderMenuConverter userOrderMenuConverter;
+			private final UserOrderMenuService userOrderMenuService;
+			
+			// 1. 사용자, 메뉴 id
+			// 2. userOrder 생성
+			// 3. userOrderMenu 생성
+			// 4. 응답 생성
+			public UserOrderResponse userOrder(User user, UserOrderRequest body) {
+				var storeMenuEntityList = body.getStoreMenuIdList()
+					.stream()
+					.map(it -> storeMenuService.getStoreMenuWithThrow(it))
+					.collect(Collectors.toList());
+				
+				var userOrderEntity = userOrderConverter.toEntity(user, storeMenuEntityList);
+				
+				// 주문
+				var newUserOrderEntity = userOrderService.order(userOrderEntity);
+				
+				// 매핑
+				var userOrderMenuEntityList = storeMenuEntityList.stream()
+					.map(it -> {
+						// menu + user order
+						var userOrderMenuEntity = userOrderMenuConverter.toEntity(newUserOrderEntity, it);
+						return userOrderMenuEntity;
+					})
+					.collect(Collectors.toList());
+				
+				// 주문내역 기록 남기기
+				userOrderMenuEntityList.forEach(it->{
+					userOrderMenuService.order(it);
+				});
+			}
+		}
+
+	(10) api.domain.userorder.controller.model 에 UserOrderResponse 작성
+	
+		@Data
+		@NoArgsConstructor
+		@AllArgsConstructor
+		@Builder
+		public class UserOrderResponse {
+			
+			private Long id;
+			private UserOrderStatus status;
+			private BigDecimal amount;
+			private LocalDateTime orderedAt;
+			private LocalDateTime acceptedAt;
+			private LocalDateTime cookingStartAt;
+			private LocalDateTime deliveryStartedAt;
+			private LocalDateTime receivedAt;
+		}
+		
+	(11) api.domain.userorder.converter 에 UserOrderConverter 추가
+
+		public UserOrderResponse toResponse(
+			UserOrderEntity userOrderEntity
+		){
+			return UserOrderResponse.builder()
+				.id(userOrderEntity.getId())
+				.status(userOrderEntity.getStatus())
+				.amount(userOrderEntity.getAmount())
+				.orderedAt(userOrderEntity.getOrderedAt())
+				.acceptedAt(userOrderEntity.getAcceptedAt())
+				.cookingStartAt(userOrderEntity.getCookingStartAt())
+				.deliveryStartedAt(userOrderEntity.getDeliveryStartedAt())
+				.receivedAt(userOrderEntity.getReceivedAt())
+				.build();
+		}
+		
+	(12) api.domain.userorder.business 에 UserOrderBusiness 추가
+
+		public class UserOrderBusiness {
+			
+			private final UserOrderService userOrderService;
+			private final UserOrderConverter userOrderConverter;
+			private final StoreMenuService storeMenuService;
+			private final UserOrderMenuConverter userOrderMenuConverter;
+			private final UserOrderMenuService userOrderMenuService;
+			
+			// 1. 사용자, 메뉴 id
+			// 2. userOrder 생성
+			// 3. userOrderMenu 생성
+			// 4. 응답 생성
+			public UserOrderResponse userOrder(User user, UserOrderRequest body) {
+				var storeMenuEntityList = body.getStoreMenuIdList()
+					.stream()
+					.map(it->storeMenuService.getStoreMenuWithThrow(it))
+					.collect(Collectors.toList());
+				
+				var userOrderEntity = userOrderConverter.toEntity(user, storeMenuEntityList);
+				
+				// 주문
+				var newUserOrderEntity = userOrderService.order(userOrderEntity);
+				
+				// 매핑
+				var userOrderMenuEntityList = storeMenuEntityList.stream()
+					.map(it -> {
+						// menu + user order
+						var userOrderMenuEntity = userOrderMenuConverter.toEntity(newUserOrderEntity, it);
+						return userOrderMenuEntity;
+					})
+					.collect(Collectors.toList());
+				
+				// 주문내역 기록 남기기
+				userOrderMenuEntityList.forEach(it->{
+					userOrderMenuService.order(it);
+				});
+				
+				// response
+				return userOrderConverter.toResponse(newUserOrderEntity);
+			}
+		}
+		
+	(13) api.domain.userorder.controller에 UserOrderApiController 추가
+		- Api 제네릭 타입 추가!
+
+		@RestController
+		@RequestMapping("/api/user-order")
+		@RequiredArgsConstructor
+		public class UserOrderApiController {
+			
+			private final UserOrderBusiness userOrderBusiness;
+			
+			// 사용자 주문
+			@PostMapping("")
+			public Api<UserOrderResponse> userOrder(
+				@Valid
+				@RequestBody Api<UserOrderRequest> userOrderRequest,
+				
+				@Parameter(hidden = true)
+				@UserSession
+				User user
+			){
+				var response = userOrderBusiness.userOrder(
+					user,
+					userOrderRequest.getBody()
+				);
+				return Api.OK(response);
+			}
+		}
+
+	(14) swagger에서 확인
+	
+		1) http://localhost:8080/swagger-ui/index.html
+		
+		2) steve@gmail.com / 1234 로 로그인 -> 토큰 복사 -> ModHeader에 붙여넣기
+		
+		3) user-order-api-controller 에서 
+			  "body": {
+				"store_menu_id_list": [
+				  1,2
+				]
+			  }
+			로 만들고 Execute -> 주문 끝!
+			
+		4) DBeaver에서도 확인 가능!!
+		
+
+4. User Order 서비스 로직 개발 - 4
+	- UserOrderResponse에는 특정 가게에서 언제 어떤 메뉴를 주문을 했는지에 대한 정보를 담을 수 없으므로
+		그런 기능을 가진 모델 클래스 추가.
+		
+	(1) api.domain.userorder.controller.model에 UserOrderDetailResponse 생성
+	
+		@Data
+		@NoArgsConstructor
+		@AllArgsConstructor
+		@Builder
+		public class UserOrderDetailResponse {
+			
+			// 사용자가 주문한 건에 대한 리스폰스 정보
+			private UserOrderResponse userOrderResponse;
+			
+			// 그 가게가 어디인지(스토어 정보)
+			private StoreResponse storeResponse;
+			
+			// 어떠한 메뉴를 주문했는지(주문 건에 대한 정보)
+			private List<StoreMenuResponse> storeMenuResponseList;
+		}
+
+	(2) api.domain.userorder.controller 에 UserOrderApiController 에 추가
+		- 코드 작성 후 alt+Enter로 메소드 자동 생성(UserOrderBusiness)
+	
+		// 현재 진행중인 주문건
+		@GetMapping("/current")
+		public Api<List<UserOrderDetailResponse>> current(
+			@Parameter(hidden = true)
+			@UserSession
+			User user
+		) {
+			var response = userOrderBusiness.current(user);
+			return Api.OK(response);
+		}
+		
+		// 과거 주문 내역
+		@GetMapping("/history")
+		public Api<List<UserOrderDetailResponse>> history(
+			@Parameter(hidden = true)
+			@UserSession User user
+		) {
+			var response = userOrderBusiness.history(user);
+			return Api.OK(response);
+		}
+		
+		// 주문 1건에 대한 내역
+		@GetMapping("/id/{orderId}")
+		public Api<UserOrderDetailResponse> read(
+			@Parameter(hidden = true)
+			@UserSession User user,
+			
+			@PathVariable Long orderId
+		) {
+			var response = userOrderBusiness.read(user, orderId);
+			return Api.OK(response);
+		}
+
+	---------------------------------------------------------------------------
+	- StoreMenuConverter 에 추가
+	
+		// 위의 메소드를 하나씩 호출하면서 리스트로 바꿔주는 메소드
+		public List<StoreMenuResponse> toResponse(
+			List<StoreMenuEntity> list
+		) {
+			return list.stream().map(it -> toResponse(it)).collect(Collectors.toList());
+		}
+	
+	---------------------------------------------------------------------------
+	
+	- UserOrderBusiness 에 추가
+
+		public class UserOrderBusiness {
+			
+			private final UserOrderService userOrderService;
+			private final UserOrderConverter userOrderConverter;
+			private final StoreMenuService storeMenuService;
+			private final StoreMenuConverter storeMenuConverter;
+			private final UserOrderMenuConverter userOrderMenuConverter;
+			private final UserOrderMenuService userOrderMenuService;
+			private final StoreService storeService;
+			private final StoreConverter storeConverter;
+			
+			...
+			
+			public List<UserOrderDetailResponse> current(User user) {
+				var userOrderEntityList = userOrderService.current(user.getId());
+				
+				// 주문 1건씩 처리
+				var userOrderDetailResponseList = userOrderEntityList.stream().map(it -> {
+					// 사용자가 주문한 메뉴들의 리스트
+					var userOrderMenuEntityList = userOrderMenuService.getUserOrderMenu(it.getId());
+					// 어떠한 메뉴들을 주문했는지 확인 가능
+					var storeMenuEntityList = userOrderMenuEntityList.stream()
+						.map(userOrderMenuEntity -> {
+							var storeMenuEntity = storeMenuService.getStoreMenuWithThrow(userOrderMenuEntity.getStoreMenuId());
+							return storeMenuEntity;
+						})
+						.collect(Collectors.toList());
+					
+					// 사용자가 주문한 스토어 TODO 리팩토링 필요
+					var storeEntity = storeService.getStoreWithThrow(storeMenuEntityList.stream().findFirst().get().getStoreId());
+					
+					return UserOrderDetailResponse.builder()
+						.userOrderResponse(userOrderConverter.toResponse(it))
+						.storeMenuResponseList(storeMenuConverter.toResponse(storeMenuEntityList))
+						.storeResponse(storeConverter.toResponse(storeEntity))
+						.build();
+				}).collect(Collectors.toList());
+				
+				return userOrderDetailResponseList;
+			}
+		
+			public List<UserOrderDetailResponse> history(User user) {
+				var userOrderEntityList = userOrderService.history(user.getId());
+				
+				// 주문 1건씩 처리
+				var userOrderDetailResponseList = userOrderEntityList.stream().map(it -> {
+					// 사용자가 주문한 메뉴들의 리스트
+					var userOrderMenuEntityList = userOrderMenuService.getUserOrderMenu(it.getId());
+					// 어떠한 메뉴들을 주문했는지 확인 가능
+					var storeMenuEntityList = userOrderMenuEntityList.stream()
+						.map(userOrderMenuEntity -> {
+							var storeMenuEntity = storeMenuService.getStoreMenuWithThrow(userOrderMenuEntity.getStoreMenuId());
+							return storeMenuEntity;
+						})
+						.collect(Collectors.toList());
+					
+					// 사용자가 주문한 스토어 TODO 리팩토링 필요
+					var storeEntity = storeService.getStoreWithThrow(storeMenuEntityList.stream().findFirst().get().getStoreId());
+					
+					return UserOrderDetailResponse.builder()
+						.userOrderResponse(userOrderConverter.toResponse(it))
+						.storeMenuResponseList(storeMenuConverter.toResponse(storeMenuEntityList))
+						.storeResponse(storeConverter.toResponse(storeEntity))
+						.build();
+				}).collect(Collectors.toList());
+				
+				return userOrderDetailResponseList;
+			}
+
+			public UserOrderDetailResponse read(User user, Long orderId) {
+				var userOrderEntity = userOrderService.getUserOrderWithThrow(orderId, user.getId());
+				
+				// 사용자가 주문한 메뉴
+				var userOrderMenuEntityList = userOrderMenuService.getUserOrderMenu(userOrderEntity.getId());
+				
+				var storeMenuEntityList = userOrderMenuEntityList.stream()
+					.map(userOrderMenuEntity -> {
+						var storeMenuEntity = storeMenuService.getStoreMenuWithThrow(userOrderMenuEntity.getStoreMenuId());
+						return storeMenuEntity;
+					})
+					.collect(Collectors.toList());
+				
+				// 사용자가 주문한 스토어 TODO 리팩토링 필요
+				var storeEntity = storeService.getStoreWithThrow(storeMenuEntityList.stream().findFirst().get().getStoreId());
+				
+				return UserOrderDetailResponse.builder()
+					.userOrderResponse(userOrderConverter.toResponse(userOrderEntity))
+					.storeMenuResponseList(storeMenuConverter.toResponse(storeMenuEntityList))
+					.storeResponse(storeConverter.toResponse(storeEntity))
+					.build();
+			}
+
+	(3) swagger로 확인
+		- 토큰 만료됬으면 로그인 부터..(steve@gmail.com / 1234, modheader에 붙여넣기)
+		1) current 확인
+		
+	(4) 상태가 주문중(ORDER)인 걸 안보는 메소드 추가
+		- api.domain.userorder.service 에 UserOrderService 에 추가
+		- db.userorder에 UserOrderRepository 에 추가
+		- api.domain.userorder.business에 UserOrderBusiness 수정
+		
+		<UserOrderRepository>
+			// 상태값 없이 조회 가능한 메소드
+			Optional<UserOrderEntity> findAllByIdAndUserId(Long id, Long userId);
+		
+		<UserOrderService>
+			public UserOrderEntity getUserOrderWithoutStatusWithThrow(
+				Long id,
+				Long userId
+			) {
+				return userOrderRepository.findAllByIdAndUserId(id, userId)
+					.orElseThrow(() -> new ApiException(ErrorCode.NULL_POINT));
+			}
+		
+		<UserOrderBusiness>
+			- getUserOrderWithoutStatusWithThrow() 로 변경!!
+		
+			public UserOrderDetailResponse read(User user, Long orderId) {
+				var userOrderEntity = userOrderService.getUserOrderWithoutStatusWithThrow(orderId, user.getId());
+				
+				// 사용자가 주문한 메뉴
+				var userOrderMenuEntityList = userOrderMenuService.getUserOrderMenu(userOrderEntity.getId());
+				
+				var storeMenuEntityList = userOrderMenuEntityList.stream()
+					.map(userOrderMenuEntity -> {
+						var storeMenuEntity = storeMenuService.getStoreMenuWithThrow(userOrderMenuEntity.getStoreMenuId());
+						return storeMenuEntity;
+					})
+					.collect(Collectors.toList());
+				
+				// 사용자가 주문한 스토어 TODO 리팩토링 필요
+				var storeEntity = storeService.getStoreWithThrow(storeMenuEntityList.stream().findFirst().get().getStoreId());
+				
+				return UserOrderDetailResponse.builder()
+					.userOrderResponse(userOrderConverter.toResponse(userOrderEntity))
+					.storeMenuResponseList(storeMenuConverter.toResponse(storeMenuEntityList))
+					.storeResponse(storeConverter.toResponse(storeEntity))
+					.build();
+			}
+	
+	(5) swagger로 재확인
+		- 토큰 만료됬으면 로그인 부터..(steve@gmail.com / 1234, modheader에 붙여넣기)
+		1) current 확인 -> user_order_response에 id 는 2 번
+		2) user-order/id/{orderId} 에서 orderId 2번으로 조회 -> 한 건에 대한 데이터 가져오기!!
+
+
+----------------------------------------------------------------------------------------------------------------------

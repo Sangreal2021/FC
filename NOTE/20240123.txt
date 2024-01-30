@@ -1,0 +1,656 @@
+[Ch.05 Store 데이터베이스 개발]
+
+
+----------------------------------------------------------------------------------------------------------------------
+1. Store DB 개발
+
+	(1) Workbench 에서 store 테이블 ERD 작성
+	
+	(2) store 테이블 우클릭 -> Copy SQL to Clipboard -> DBeaver 에 붙이기
+	
+		CREATE TABLE IF NOT EXISTS `delivery`.`store` (
+		  `id` BIGINT(32) NOT NULL AUTO_INCREMENT,
+		  `name` VARCHAR(100) NOT NULL,
+		  `address` VARCHAR(150) NOT NULL,
+		  `status` VARCHAR(50) NULL,
+		  `category` VARCHAR(50) NULL,
+		  `star` DOUBLE NULL DEFAULT 0,
+		  `thumbnail_url` VARCHAR(200) NOT NULL,
+		  `minimum_amount` DECIMAL(11,4) NOT NULL,
+		  `minimum_delivery_amount` DECIMAL(11,4) NOT NULL,
+		  `phone_number` VARCHAR(20) NULL,
+		  PRIMARY KEY (`id`))
+		ENGINE = InnoDB;
+
+	(3) Entity 추가
+	
+		1) db.store 에 StoreRepository 인터페이스 생성
+		
+			- db.store.enums 에 StoreStatus, StoreCategory 이넘 생성
+			
+				@AllArgsConstructor
+				public enum StoreStatus {
+					
+					REGISTERED("등록"),
+					UNREGISTERED("해지"),
+					;
+					
+					private String description;
+				}
+			----------------------------------------------------------
+			
+				@AllArgsConstructor
+				public enum StoreCategory {
+					
+					// 중식
+					CHINESE_FOOD("중식", "중식"),
+					// 양식
+					WESTERN_FOOD("양식", "양식"),
+					// 한식
+					KOREAN_FOOD("한식", "한식"),
+					// 일식
+					JAPANESE_FOOD("일식", "일식"),
+					// 치킨
+					CHICKEN("치킨", "치킨"),
+					// 피자
+					PIZZA("피자", "피자"),
+					// 햄버거
+					HAMBURGER("햄버거", "햄버거"),
+					// 커피
+					COFFEE_TEA("커피&차", "커피&차"),
+					;
+					
+					private String display;
+					private String description;
+				}
+		
+		2) db.store 에 StoreEntity 클래스 생성
+		
+			@Data
+			@NoArgsConstructor
+			@AllArgsConstructor
+			@EqualsAndHashCode(callSuper = true)
+			@SuperBuilder
+			@Entity
+			@Table(name = "store")
+			public class StoreEntity extends BaseEntity {
+				
+				@Column(length = 100, nullable = false)
+				private String name;
+				
+				@Column(length = 150, nullable = false)
+				private String address;
+				
+				@Column(length = 50, nullable = false)
+				@Enumerated(EnumType.STRING)
+				private StoreStatus status;
+				
+				@Column(length = 50, nullable = false)
+				@Enumerated(EnumType.STRING)
+				private StoreCategory category;
+				
+				private double star;
+				
+				@Column(length = 200, nullable = false)
+				private String thumbnailUrl;
+				
+				@Column(precision = 11, scale = 4, nullable = false)
+				private BigDecimal minimumAmount;
+				
+				@Column(precision = 11, scale = 4, nullable = false)
+				private BigDecimal minimumDeliveryAmount;
+				
+				@Column(length = 20)
+				private String phoneNumber;
+			}
+			
+		3) db.store 에 StoreRepository 인터페이스 생성
+
+			public interface StoreRepository extends JpaRepository<StoreEntity, Long> {
+				
+				// 유효한 스토어
+				// select * from store where id = ? and status = ? order by id desc limit 1
+				Optional<StoreEntity> findFirstByIdAndStatusOrderByIdDesc(Long id, StoreStatus status);
+				
+				// 유효한 스토어 리스트
+				// select * from store where status = ? order by id desc
+				List<StoreEntity> findAllByStatusOrderByIdDesc(StoreStatus status);
+				
+				// 유효한 특정 카테고리의 스토어 리스트
+				List<StoreEntity> findAllByStatusAndCategoryOrderByStarDesc(StoreStatus status, StoreCategory storeCategory);
+			}
+
+
+2. Store 서비스 로직 개발
+	- api.domain.store 패키지에 business, controller, converter, service 패키지 생성
+
+	(1) api.domain.store.service 에 StoreService 클래스 생성
+	
+		@Service
+		@RequiredArgsConstructor
+		public class StoreService {
+			
+			private final StoreRepository storeRepository;
+			
+			// 유효한 스토어 가져오기
+			public StoreEntity getStoreWithThrow(Long id) {
+				// 아래 코드의 장점 디버깅시 편함
+				var entity = storeRepository.findFirstByIdAndStatusOrderByIdDesc(id, StoreStatus.REGISTERED);
+				return entity.orElseThrow(() -> new ApiException(ErrorCode.NULL_POINT));
+			}
+			
+			// 스토어 등록
+			public StoreEntity register(StoreEntity storeEntity) {
+				return Optional.ofNullable(storeEntity)
+					.map(it -> {
+						it.setStar(0);
+						it.setStatus(StoreStatus.REGISTERED);
+						// TODO 등록일시 추가하기
+						
+						return storeRepository.save(it);
+					})
+					.orElseThrow(() -> new ApiException(ErrorCode.NULL_POINT));
+			}
+			
+			// 카테고리로 스토어 검색
+			public List<StoreEntity> searchByCategory(StoreCategory storeCategory) {
+				var list = storeRepository.findAllByStatusAndCategoryOrderByStarDesc(
+					StoreStatus.REGISTERED,
+					storeCategory
+				);
+				return list;
+			}
+			
+			// 전체 스토어
+			public List<StoreEntity> registerStore() {
+				var list = storeRepository.findAllByStatusOrderByIdDesc(StoreStatus.REGISTERED);
+				return list;
+			}
+		}
+		
+	(2) domain.store.controller.model 에 StoreRegisterRequest 클래스 생성
+	
+		@Data
+		@NoArgsConstructor
+		@AllArgsConstructor
+		public class StoreRegisterRequest {
+			
+			@NotBlank // "", " ", null 모두 안됨
+			private String name;
+			
+			@NotBlank
+			private String address;
+			
+			@NotNull // 카테고리는 Enum 이라서 문자 X
+			private StoreCategory storeCategory;
+			
+			@NotBlank
+			private String thumbnailUrl;
+			
+			@NotNull
+			private BigDecimal minimumAmount;
+			
+			@NotNull
+			private BigDecimal minimumDeliveryAmount;
+			
+			@NotBlank
+			private String phoneNumber;
+		}
+		
+	(3) domain.store.controller.model 에 StoreResponse 클래스 생성
+
+		@Data
+		@NoArgsConstructor
+		@AllArgsConstructor
+		@Builder
+		public class StoreResponse {
+			
+			private Long id;
+			private String name;
+			private String address;
+			private StoreStatus status;
+			private StoreCategory category;
+			private double star;
+			private String thumbnailUrl;
+			private BigDecimal minimumAmount;
+			private BigDecimal minimumDeliveryAmount;
+			private String phoneNumber;
+		}
+		
+	(4) domain.store.converter 에 StoreConverter 클래스 생성
+
+		@Converter
+		public class StoreConverter {
+
+			public StoreEntity toEntity(
+				StoreRegisterRequest request
+			) {
+				return Optional.ofNullable(request)
+					.map(it -> {
+						return StoreEntity.builder()
+							.name(request.getName())
+							.address(request.getAddress())
+							.category(request.getStoreCategory())
+							.minimumAmount(request.getMinimumAmount())
+							.minimumDeliveryAmount(request.getMinimumDeliveryAmount())
+							.thumbnailUrl(request.getThumbnailUrl())
+							.phoneNumber(request.getPhoneNumber())
+							.build();
+					})
+					.orElseThrow(() -> new ApiException(ErrorCode.NULL_POINT));
+			}
+			
+			public StoreResponse toResponse(
+				StoreEntity entity
+			) {
+				return Optional.ofNullable(entity)
+					.map(it -> {
+						return StoreResponse.builder()
+							.id(entity.getId())
+							.name(entity.getName())
+							.status(entity.getStatus())
+							.category(entity.getCategory())
+							.address(entity.getAddress())
+							.minimumAmount(entity.getMinimumAmount())
+							.minimumDeliveryAmount(entity.getMinimumDeliveryAmount())
+							.thumbnailUrl(entity.getThumbnailUrl())
+							.phoneNumber(entity.getPhoneNumber())
+							.star(entity.getStar())
+							.build();
+					})
+					.orElseThrow(() -> new ApiException(ErrorCode.NULL_POINT));
+			}
+		}
+		
+		-> Converter 완성 -> 비즈니스 로직 구현 가능
+		
+	(5) domain.store.business 에 StoreBusiness 클래스 생성
+
+		@Business
+		@RequiredArgsConstructor
+		public class StoreBusiness {
+			
+			private final StoreService storeService;
+			private final StoreConverter storeConverter;
+			
+			public StoreResponse register(
+				StoreRegisterRequest storeRegisterRequest
+			) {
+				// 로직 : req -> entity 로 변환 -> response 로 변환
+				var entity = storeConverter.toEntity(storeRegisterRequest);
+				var newEntity = storeService.register(entity);
+				var response = storeConverter.toResponse(newEntity);
+				
+				return response;
+			}
+			
+			public List<StoreResponse> searchCategory(
+				StoreCategory storeCategory
+			) {
+				// entity 리스트 -> response 리스트로 변환
+				var storeList = storeService.searchByCategory(storeCategory);
+				
+				// entity 의 내용이 response 가 들어간 리스트로 바뀜
+				return storeList.stream()
+					.map(storeConverter::toResponse)
+					.collect(Collectors.toList());
+			}
+		}
+		
+		-> Controller와 연결
+		
+	(6) domain.store.controller 에 StoreApiController, StoreOpenApiController 클래스 생성
+	
+		@RestController
+		@RequestMapping("/api/store")
+		@RequiredArgsConstructor
+		public class StoreApiController {
+			
+			private final StoreBusiness storeBusiness;
+			
+			@GetMapping("/search")
+			public Api<List<StoreResponse>> search(
+				@RequestParam(required = false)
+				StoreCategory storeCategory
+			) {
+				var response = storeBusiness.searchCategory(storeCategory);
+				return Api.OK(response);
+			}
+		}
+		
+		-------------------------------------------------------------------------
+		- 가맹점 등록은 로그인한 사용자가 등록X, 가맹정 직원들이 등록O
+			-> 즉, Open API여야 함!
+
+		@RestController
+		@RequestMapping("/open-api/store")
+		@RequiredArgsConstructor
+		public class StoreOpenApiController {
+			
+			private final StoreBusiness storeBusiness;
+			
+			@PostMapping("/register")
+			public Api<StoreResponse> register(
+				@Valid
+				@RequestBody Api<StoreRegisterRequest> request
+			) {
+				var response = storeBusiness.register(request.getBody());
+				return Api.OK(response);
+			}
+		}
+		
+	(7) 실제 등록
+		
+		1) swagger 사이트 새로고침
+		
+		2) user-open-api-controller 탭에서 내용 작성
+			{
+			  "result": {
+				"result_code": 0,
+				"result_message": "string",
+				"result_description": "string"
+			  },
+			  "body": {
+				"name": "스타벅스 강남",
+				"address": "서울시 강남",
+				"store_category": "COFFEE_TEA",
+				"thumbnail_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/4/45/A_small_cup_of_coffee.JPG/330px-A_small_cup_of_coffee.JPG",
+				"minimum_amount": 8000,
+				"minimum_delivery_amount": 3000,
+				"phone_number": "02-111-2222"
+			  }
+			}
+			
+			----------------------------------------------------------------------------
+			
+			{
+			  "result": {
+				"result_code": 0,
+				"result_message": "string",
+				"result_description": "string"
+			  },
+			  "body": {
+				"name": "이디야커피 강남",
+				"address": "서울시 강남",
+				"store_category": "COFFEE_TEA",
+				"thumbnail_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/4/45/A_small_cup_of_coffee.JPG/330px-A_small_cup_of_coffee.JPG",
+				"minimum_amount": 5000,
+				"minimum_delivery_amount": 3000,
+				"phone_number": "02-333-5555"
+			  }
+			}
+			
+		3) 실행
+		
+		4) 스웨거에서 다시 로그인 -> 로그인 확인(me) -> store-api-controller에서 내가 등록한 매장 조회 가능
+		
+		5) 
+
+
+3. Store Menu DB 설계
+	
+	(1) Workbench에 store_menu 테이블 추가
+		-> DBeaver 에서 실행
+		
+	(2) 인덱스 지정
+		Workbench에 DB에 접속 -> delivery DB에 store_menu 테이블 우클릭 -> Alter table
+		-> 아래 Indexes -> Primary에 idx_store_id 입력 -> 오른쪽에 store_id 체크 -> Apply
+
+	(3) db.storemenu.enums 에 StoreMenuStatus 이넘 생성
+	
+		@AllArgsConstructor
+		public enum StoreMenuStatus {
+			
+			REGISTERED("등록"),
+			UNREGISTERED("해지"),
+			;
+
+			private String description;
+		}
+
+	(4) db.storemenu 에 StoreMenuEntity 클래스 생성
+
+		@Data
+		@NoArgsConstructor
+		@AllArgsConstructor
+		@EqualsAndHashCode(callSuper = true)
+		@SuperBuilder
+		@Entity
+		@Table(name = "store_menu")
+		public class StoreMenuEntity extends BaseEntity {
+			
+			@Column(nullable = false)
+			private Long storeId;
+			
+			@Column(length = 100, nullable = false)
+			private String name;
+			
+			@Column(precision = 11, scale = 4, nullable = false)
+			private BigDecimal amount;
+			
+			@Column(length = 50, nullable = false)
+			@Enumerated(EnumType.STRING)
+			private StoreMenuStatus status;
+			
+			@Column(length = 200, nullable = false)
+			private String thumbnailUrl;
+			
+			private int likeCount;
+			
+			private int sequence;
+		}
+		
+		-> 여기에 해당하는 Repository 생성
+		
+	(5) db.storemenu 에 StoreMenuRepository 인터페이스 생성
+
+		public interface StoreMenuRepository extends JpaRepository<StoreMenuEntity, Long> {
+			
+			// 유효한 메뉴 체크
+			// select * from store_menu where id =? and status = ? order by id desc limit 1
+			Optional<StoreMenuEntity> findFirstByIdAndStatusOrderByIdDesc(Long id, StoreMenuStatus status);
+			
+			// 특정 가게의 메뉴 가져오기
+			// select * from store_menu where store_id = ? and status =? order by sequence desc
+			List<StoreMenuEntity> findAllByStoreIdAndStatusOrderBySequenceDesc(Long storeId, StoreMenuStatus status);
+		}
+
+
+4. Store Menu 서비스 로직 개발
+	- api.domain.storemenu 패키지 생성 그 하위에 business, controller, converter, service 패키지 생성
+
+	(1) domain.storemenu.service 에 StoreMenuService 클래스 생성
+	
+		@Service
+		@RequiredArgsConstructor
+		public class StoreMenuService {
+			
+			private final StoreMenuRepository storeMenuRepository;
+			
+			// 해당 id를 넘겨주면 해당 가게에 있는 스토어를 찾아서 리턴
+			public StoreMenuEntity getStoreMenuWithThrow(Long id) {
+				var entity = storeMenuRepository.findFirstByIdAndStatusOrderByIdDesc(id, StoreMenuStatus.REGISTERED);
+				return entity.orElseThrow(() -> new ApiException(ErrorCode.NULL_POINT));
+			}
+			
+			public List<StoreMenuEntity> getStoreMenuByStoreId(Long storeId) {
+				return storeMenuRepository.findAllByStoreIdAndStatusOrderBySequenceDesc(storeId, StoreMenuStatus.REGISTERED);
+			}
+			
+			public StoreMenuEntity register(
+				StoreMenuEntity storeMenuEntity
+			) {
+				
+				return Optional.ofNullable(storeMenuEntity)
+					.map(it -> {
+						it.setStatus(StoreMenuStatus.REGISTERED);
+						return storeMenuRepository.save(it);
+					})
+					.orElseThrow(() -> new ApiException(ErrorCode.NULL_POINT));
+			}
+		}
+		
+	(2) domain.storemenu.controller 패키지에 아래 생성 후 StoreMenuApiController, StoreMenuOpenApiController 생성
+		
+		1) domain.storemenu.controller.model 패키지 생성 후 StoreMenuRegisterRequest 생성
+		
+			@Data
+			@NoArgsConstructor
+			@AllArgsConstructor
+			public class StoreMenuRegisterRequest {
+
+				@NotNull
+				private Long storeId;
+				
+				@NotBlank
+				private String name;
+				
+				@NotNull
+				private BigDecimal amount;
+				
+				@NotBlank
+				private String thumbnailUrl;
+			}
+		
+		2) domain.storemenu.controller.model 에 StoreMenuResponse 생성
+		
+			@Data
+			@NoArgsConstructor
+			@AllArgsConstructor
+			@Builder
+			public class StoreMenuResponse {
+				
+				private Long id;
+				
+				private Long storeId;
+				
+				private String name;
+				
+				private BigDecimal amount;
+				
+				private StoreMenuStatus status;
+				
+				private String thumbnailUrl;
+				
+				private int likeCount;
+				
+				private int sequence;
+			}
+			
+	(3) api.domain.storemenu.converter 에 StoreMenuConverter 클래스 생성
+	
+		@Converter
+		public class StoreMenuConverter {
+			
+			public StoreMenuEntity toEntity(StoreMenuRegisterRequest request) {
+				
+				return Optional.ofNullable(request)
+					.map(it -> {
+						return StoreMenuEntity.builder()
+							.storeId(request.getStoreId())
+							.name(request.getName())
+							.amount(request.getAmount())
+							.thumbnailUrl(request.getThumbnailUrl())
+							.build();
+					})
+					.orElseThrow(() -> new ApiException(ErrorCode.NULL_POINT));
+			}
+			
+			public StoreMenuResponse toResponse(
+				StoreMenuEntity storeMenuEntity
+			) {
+				return Optional.ofNullable(storeMenuEntity)
+					.map(it -> {
+						return StoreMenuResponse.builder()
+							.id(storeMenuEntity.getStoreId())
+							.name(storeMenuEntity.getName())
+							.storeId(storeMenuEntity.getStoreId())
+							.amount(storeMenuEntity.getAmount())
+							.status(storeMenuEntity.getStatus())
+							.thumbnailUrl(storeMenuEntity.getThumbnailUrl())
+							.likeCount(storeMenuEntity.getLikeCount())
+							.sequence(storeMenuEntity.getSequence())
+							.build();
+					})
+					.orElseThrow(() -> new ApiException(ErrorCode.NULL_POINT));
+			}
+		}
+		
+	(4) domain.storemenu.business 에 StoreMenuBusiness 생성
+	
+		@Business
+		@RequiredArgsConstructor
+		public class StoreMenuBusiness {
+			
+			private final StoreMenuService storeMenuService;
+			private final StoreMenuConverter storeMenuConverter;
+			
+			public StoreMenuResponse register(
+				StoreMenuRegisterRequest request
+			) {
+				// req -> entity 로 변환 -> save 후 response 로 변환
+				var entity = storeMenuConverter.toEntity(request);
+				var newEntity = storeMenuService.register(entity);
+				var response = storeMenuConverter.toResponse(newEntity);
+				return response;
+			}
+			
+			// 특정 가게에 있는 내용을 검색
+			public List<StoreMenuResponse> search(
+				Long storeId
+			){
+				var list = storeMenuService.getStoreMenuByStoreId(storeId);
+				
+				return list.stream()
+					.map(it->{
+						return storeMenuConverter.toResponse(it);
+					})
+					// .map(storeMenuConverter::toResponse)
+					.collect(Collectors.toList());
+			}
+		}
+
+	(5) 컨트롤러에 등록 - api.domain.storemenu.controller
+		
+		1) StoreMenuOpenApiController 작성
+		
+			@RestController
+			@RequestMapping("/open-api/store-menu")
+			@RequiredArgsConstructor
+			public class StoreMenuOpenApiController {
+				
+				private final StoreMenuBusiness storeMenuBusiness;
+				
+				@PostMapping("/register")
+				public Api<StoreMenuResponse> register(
+					@Valid
+					@RequestBody Api<StoreMenuRegisterRequest> request
+				){
+					var req = request.getBody();
+					var response = storeMenuBusiness.register(req);
+					
+					return Api.OK(response);
+				}
+			}
+			
+		2) StoreMenuApiController 작성
+		
+			@RestController
+			@RequestMapping("/api/store-menu")
+			@RequiredArgsConstructor
+			public class StoreMenuApiController {
+				
+				private final StoreMenuBusiness storeMenuBusiness;
+				
+				@GetMapping("/search")
+				public Api<List<StoreMenuResponse>> search(
+					@RequestParam Long storeId
+				){
+					var response = storeMenuBusiness.search(storeId);
+					return Api.OK(response);
+				}
+			}
+			
+		-> swagger로 확인 - http://localhost:8080/swagger-ui/index.html
+
+----------------------------------------------------------------------------------------------------------------------

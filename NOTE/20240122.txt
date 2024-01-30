@@ -1,0 +1,1431 @@
+[Ch.03 실전 프로젝트 2] - 프로젝트 베이스 개발
+
+
+
+----------------------------------------------------------------------------------------------------------------------
+1. Exception Handler 적용하기 - 2
+
+※ 모든 예외는 Throwable의 자식들
+	- 그 중 RuntimeException을 상속받아 우리만의 예외를 하나 만들기.
+	
+
+2. api.common.exception 패키지 생성 후 ApiException 클래스 생성
+
+	public class ApiException extends RuntimeException {
+		private final ErrorCodeIfs errorCodeIfs;
+		private final String errorDescription;
+		
+		public ApiException(ErrorCodeIfs errorCodeIfs){
+			super(errorCodeIfs.getDescription()); // 받자마자 부모(RuntimeException)에게 메세지 던짐
+			this.errorCodeIfs = errorCodeIfs;
+			this.errorDescription = errorCodeIfs.getDescription();
+		}
+		
+		// errorDescription 을 직접 넘겨줌
+		public ApiException(ErrorCodeIfs errorCodeIfs, String errorDescription){
+			super(errorDescription); // 내가 정의한 메세지를 지정
+			this.errorCodeIfs = errorCodeIfs;
+			this.errorDescription = errorDescription;
+		}
+		
+		// 예외가 터질수도 있으므로 에러코드와 예외를 던짐
+		public ApiException(ErrorCodeIfs errorCodeIfs, Throwable tx){
+			super(tx);
+			this.errorCodeIfs = errorCodeIfs;
+			this.errorDescription = errorCodeIfs.getDescription();
+		}
+		
+		// 모든 것을 다 받을 수 있는 생성자
+		public ApiException(ErrorCodeIfs errorCodeIfs, Throwable tx, String errorDescription){
+			super(tx);
+			this.errorCodeIfs = errorCodeIfs;
+			this.errorDescription = errorDescription; // 내가 원하는 메세지
+		}
+	}
+
+
+3. api.common.exception 패키지에 ApiExceptionIfs 인터페이스 생성
+
+	// 아래 두가지 메소드는 우리가 쓰는 커스텀 exception 에서는 반드시 정의해야 됨.
+
+	public interface ApiExceptionIfs {
+		ErrorCodeIfs getErrorCodeIfs();
+		String getErrorDescription();
+	}
+
+	-> 이후에 ApiException 수정
+		@Getter
+		public class ApiException extends RuntimeException implements ApiExceptionIfs {
+
+
+4. 위의 발생한 예외를 캐치할 ExceptionHandler 필요
+	- api.exceptionhandler 패키지에 ApiExceptionHandler 클래스 생성
+
+	@Order(value = Integer.MIN_VALUE) // 최우선 처리
+	@RestControllerAdvice
+	@Slf4j
+	public class ApiExceptionHandler {
+		
+		@ExceptionHandler(value = ApiException.class)
+		public ResponseEntity<Api<Object>> apiException(
+			ApiException apiException
+		){
+			log.error("", apiException);
+			
+			var errorCode = apiException.getErrorCodeIfs();
+			
+			return ResponseEntity
+				.status(errorCode.getHttpStatusCode())
+				.body(
+					Api.ERROR(errorCode, apiException.getErrorDescription())
+				);
+		}
+	}
+	
+	
+5. 에러 테스트
+	- AccountApiController에 코드 수정
+	
+			@GetMapping("/me")
+			public Api<AccountMeResponse> me(){
+				var response = AccountMeResponse.builder()
+					.name("홍길동")
+					.email("A@gmail.com")
+					.registeredAt(LocalDateTime.now())
+					.build();
+				
+				var str = "안녕하세요";
+				var age = 0;
+				try {
+					Integer.parseInt(str);
+				} catch (Exception e) {
+					throw new ApiException(ErrorCode.SERVER_ERROR, e, "사용자 Me 호출시 에러 발생");
+				}
+				
+				return Api.OK(response);
+			}
+		}
+		
+	-> 스웨거로 테스트 http://localhost:8080/swagger-ui/index.html
+	-> 스웨거 UI 및 콘솔에서 에러메세지 확인!
+	
+	-> 즉, ApiExceptionHandler가 이런식으로 발생했을 때마다 별도로 response를 그 자리에서 내려주는게 아니라
+		exceptionhandler로 모든 것을 다 보낸 후 거기서 정의된 내용으로 response를 내려줄 것임.
+
+
+6. Interceptor를 통한 Api 보안 적용
+	- 클라이언트를 위한 Header를 이용한 인증 방식(Interceptor)
+	- 웹을 위한 Cookie를 이용한 인증 방식
+	
+	(1) api.interceptor 패키지에 AuthorizationInterceptor 클래스 생성
+	
+		- HandlerInterceptor 상속받은 후 메소드 구현(alt+shift+P) 중 preHandle() 구현
+
+			@Slf4j
+			@RequiredArgsConstructor
+			@Component
+			public class AuthorizationInterceptor implements HandlerInterceptor {
+				
+				@Override
+				public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
+				
+					log.info("Authorization Interceptor : {}", request.getRequestURI());
+					
+					// WEB 즉 Chrome의 경우 GET, POST등 을 요청하기 전 OPTION API를 요청을 해서
+					// 해당 메소드를 지원하는지 체크. = 통과
+					if (HttpMethod.OPTIONS.matches(request.getMethod())) {
+						return true;
+					}
+					
+					// js, html, png 등 resource 를 요청하는 경우 통과
+					if (handler instanceof ResourceHttpRequestHandler) {
+						return true;
+					}
+					
+					// TODO Header 검증
+					
+					
+					return true;    // 일단 통과 처리
+				}
+			}
+			
+	(2) 인터셉터 등록 -> Config 설정
+		- api.config.web 패키지 생성 후 WebConfig 클래스 생성
+		- 비회원인 경우 일정 API들은 인증 과정을 거치게 하면 안됨!!!
+			ex) open-api로 시작하면 검증X, 그 외에는 검증O
+		
+		@Configuration
+		@RequiredArgsConstructor
+		public class WebConfig implements WebMvcConfigurer {
+			
+			private final AuthorizationInterceptor authorizationInterceptor;
+			
+			// 검증을 하지 않을 API. 약관, 회원가입 등
+			private List<String> OPEN_API = List.of(
+				"/open-api/**"
+			);
+			
+			// 검증을 하지 않을 기타 주소
+			private List<String> DEFAULT_EXCLUDE = List.of(
+				"/",
+				"favicon.ico",
+				"/error"
+			);
+			
+			// swagger 관련 주소도 검증 X
+			private List<String> SWAGGER = List.of(
+				"/swagger-ui.html",
+				"/swagger-ui/**",
+				"/v3/api-docs/**"
+			);
+			
+			@Override
+			public void addInterceptors(InterceptorRegistry registry) {
+				registry.addInterceptor(authorizationInterceptor)
+					.excludePathPatterns(OPEN_API)
+					.excludePathPatterns(DEFAULT_EXCLUDE)
+					.excludePathPatterns(SWAGGER)
+				;
+			}
+		}
+		
+		-> LoggerFilter 클래스에 init 로그 찍기
+			
+			@Override
+			public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain) throws IOException, ServletException {
+				
+				var req = new ContentCachingRequestWrapper((HttpServletRequest) request); // 형변환
+				var res = new ContentCachingResponseWrapper((HttpServletResponse) response); // 형변환
+				
+				log.info("INIT URI : {}" , req.getRequestURI());
+				chain.doFilter(req, res);
+
+		-> 스웨거에서 Excute 해보면 콘솔에서 메세지 확인 가능!!
+		
+----------------------------------------------------------------------------------------------------------------------
+
+[Ch.04 실전 프로젝트 3 : 사용자 도메인 개발]
+	- 사용자 가입, 사용자 정보, 사용자 토큰 발행 등
+
+1. 사용자 DB 개발
+
+	(1) Workbench 실행시키고 ERD 창 띄우기
+	(2) user 테이블 작성
+	(3) user 테이블 우클릭 -> Copy SQL to Clipboard -> DBeaver에 붙이기
+	
+		CREATE TABLE IF NOT EXISTS `user` (
+		  `id` BIGINT(32) NOT NULL AUTO_INCREMENT,
+		  `name` VARCHAR(50) NOT NULL,
+		  `email` VARCHAR(100) NOT NULL,
+		  `password` VARCHAR(100) NOT NULL,
+		  `status` VARCHAR(50) NOT NULL,
+		  `address` VARCHAR(150) NOT NULL,
+		  `registered_at` DATETIME NULL,
+		  `unregistered_at` DATETIME NULL,
+		  `last_login_at` DATETIME NULL,
+		  PRIMARY KEY (`id`))
+		ENGINE = InnoDB;
+
+		SELECT * FROM USER;
+
+----------------------------------------------------------------------------------------------------------
+spring:
+  jpa:
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: false
+        dialect: org.hibernate.dialect.MySQL8Dialect
+        ddl-auto: validate
+  datasource:
+    url: jdbc:mysql://localhost:3306/delivery?useSSL=false&useUnicode=true&allowPublicKeyRetrieval=true
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    username: root
+    password: admin123!
+
+	<---------------------------------------- 형식 ------------------------------------------>
+
+spring:
+  jpa:
+    show-sql: true
+    properties:
+		format_sql: false
+		dialect: org.hibernate.dialect.MySQL8Dialect
+	hibernate:
+	ddl-auto: validate
+  datasource:
+    url: jdbc:mysql://localhost:3306/delivery?useSSL=false&useUnicode=true&allowPublicKeyRetrieval=true
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    username: root
+    password: admin123!
+----------------------------------------------------------------------------------------------------------
+
+
+2. UserEntity 개발
+	
+	(1) db.user 패키지 생성
+
+		- BaseEntity 클래스 수정
+			@Data
+			@SuperBuilder
+			@MappedSuperclass
+			@NoArgsConstructor
+			@AllArgsConstructor
+			public class BaseEntity {
+
+		- @Entity(name = "user") : 기본적으로 해당 클래스의 이름을 SnakeCase로 바꿔서 DB안에 있는 특정 테이블을 검색.
+			즉, UserEntity라는 클래스 이름을 쓰지 않고 name에 있는 이름을 가지고 Entity 이름으로 쓰겠다는 의미.
+		- @Table(name = "user") : Entity의 이름을 지어주는게 아니라 클래스명이 다르더라도 'user' 테이블의 이름을
+			가지고 가서 DB와 매칭을 함.
+			
+		1) db.user.enums 패키지 생성 후 UserStatus 이넘 생성.
+			- enum 값으로 사용하는 이유
+				> REGISTERED 같은 문자열의 오탈자 방지.
+				> DB에 저장했을 때 DB로만 값을 읽더라도 한눈에 알아보기 쉬움.
+				> 반드시 지정된 데이터만 들어갈 수 있도록 관리.
+		
+			@AllArgsConstructor
+			public enum UserStatus {
+				
+				REGISTERED("등록"),
+				UNREGISTERED("해지"),
+				;
+				
+				private final String description;
+			}
+			
+		2) db.user 패키지에 UserEntity 클래스 생성
+
+		@Entity
+		@Table(name = "user")
+		@Data
+		@NoArgsConstructor
+		@AllArgsConstructor
+		@SuperBuilder
+		@EqualsAndHashCode(callSuper = true)
+		public class UserEntity extends BaseEntity {
+
+			@Column(length = 50, nullable = false)
+			private String name;
+			
+			@Column(length = 100, nullable = false)
+			private String email;
+			
+			@Column(length = 100, nullable = false)
+			private String password;
+			
+			@Column(length = 50, nullable = false)
+			@Enumerated(EnumType.STRING) // String 타입의 ENUM 값 사용
+			private UserStatus status;
+			
+			@Column(length = 150, nullable = false)
+			private String address;
+			
+			private LocalDateTime registeredAt;
+			
+			private LocalDateTime unregisteredAt;
+			
+			private LocalDateTime lastLoginAt;
+		}
+		
+		3) db.user 패키지에 UserRepository 인터페이스 생성
+		
+			// JpaRepository<UserEntity, Long> 의미
+			//  1. 어떠한 Entity 를 참고할건지 지정.
+			//  2. AutoIncrement 된 PK 즉 Id 라는 어노테이션을 가진 변수의 타입
+			public interface UserRepository extends JpaRepository<UserEntity, Long> {
+				
+				// select * from user where id =? and status = ? order by id desc limit 1
+				// findFirstByIdAndStatusOrderByIdDesc 분석
+				//  'FirstBy' : limit 1
+				//	'Id' : 첫번째 파라미터
+				//	'Status' : 두번째 파라미터
+				//	나머지 구문은 위의 쿼리의 내용 반영
+				Optional<UserEntity> findFirstByIdAndStatusOrderByIdDesc(Long userId, UserStatus status);
+				
+				// select * from user where email = ? and password = ? and status = ? order by id desc limit 1
+				Optional<UserEntity> findFirstByEmailAndPasswordAndStatusOrderByIdDesc(String email, String password, UserStatus status);
+			}
+
+
+3. 사용자 서비스 로직 - 1
+	- api 프로젝트와 db 프로젝트에 account 패키지 모두 삭제
+	- api.common.annotation 패키지 생성
+		: 서비스 로직, 유저 데이터 처리 도메인 로직 등의 기능을 세분화 하기 위해
+	- 데이터 흐름
+		"사용자 요청 -> Controller -> Business -> Service -> Repository(DB)"
+		Business 로직은 여러가지 Service들을 가져다가 처리.
+		Controller는 Header, Response에 대한 데이터 변환 등을 담당.
+	
+
+	(1) Business 어노테이션 생성
+	
+		// @Service
+		//  Spring 에서 자동으로 이 어노테이션 감지 및 @Business 어노테이션 달린 클래스들은
+		//  자동으로 Bean 으로 등록됨
+
+		@Target(ElementType.TYPE)
+		@Retention(RetentionPolicy.RUNTIME)
+		@Service
+		public @interface Business {
+		 
+			@AliasFor(annotation = Service.class)
+			String value() default "";
+		}
+		
+	(2) Converter 어노테이션 생성
+		- 위의 Business 어노테이션 복사 붙여넣기
+		
+		// 데이터 변환용 어노테이션
+
+		@Target(ElementType.TYPE)
+		@Retention(RetentionPolicy.RUNTIME)
+		@Service
+		public @interface Converter {
+		 
+			@AliasFor(annotation = Service.class)
+			String value() default "";
+		}
+		
+	(3) api.domain.user 패키지 생성
+		- 그 하위에 business, controller, converter, service 패키지 각각 생성
+		
+		1) user.service 패키지에 UserService 클래스 생성
+		
+			@RequiredArgsConstructor
+			@Service
+			public class UserService {
+				
+				private final UserRepository userRepository;
+			}
+		
+		2) user.converter 패키지에 UserConverter 클래스 생성
+
+			@RequiredArgsConstructor
+			@Converter
+			public class UserConverter {
+				
+			}
+		
+		3) user.controller 패키지에 UserApiController, UserOpenApiController 클래스 생성
+		
+			@RequiredArgsConstructor
+			@RestController
+			@RequestMapping("/api/user")
+			public class UserApiController {
+				private final UserBusiness userBusiness;
+			}
+			
+			------------------------------------------------------------------------------
+			- 참조 : api.config.web 패키지에 WebConfig 의 인증 여부
+			
+			@RequiredArgsConstructor
+			@RestController
+			@RequestMapping("/open-api/user")
+			public class UserOpenApiController {
+				private final UserBusiness userBusiness;
+			}
+			
+		4) user.business 패키지에 UserBusiness 클래스 생성
+
+			@Business
+			@RequiredArgsConstructor
+			public class UserBusiness {
+				private final UserService userService;
+				private final UserConverter userConverter;
+			}
+			
+	(4) domain.user의 각 클래스들 작성
+	
+		1) api.domain.user.controller.model 패키지 생성
+			- UserResponse 클래스 생성
+			
+				@Data
+				@NoArgsConstructor
+				@AllArgsConstructor
+				@Builder
+				public class UserResponse {
+				}
+			
+			- UserRegisterRequest 클래스 생성
+		
+				@Data
+				@NoArgsConstructor
+				@AllArgsConstructor
+				public class UserRegisterRequest {
+					
+					@NotBlank
+					private String name;
+					
+					@NotBlank
+					@Email
+					private String email;
+					
+					@NotBlank
+					private String address;
+					
+					@NotBlank
+					private String password;
+				}
+				
+		2) 세부코드 작성
+		
+			@RequiredArgsConstructor
+			@RestController
+			@RequestMapping("/open-api/user")
+			public class UserOpenApiController {
+				
+				private final UserBusiness userBusiness;
+				
+				// 사용자 가입 요청
+				@PostMapping("/register")
+				public Api<UserResponse> register(
+					@Valid
+					@RequestBody Api<UserRegisterRequest> request
+				) {
+					var response = userBusiness.register(request.getBody()); // alt+Enter로 메소드 생성
+				}
+			}
+			
+			-------------------------------------------------------------------------------
+			
+			@RequiredArgsConstructor
+			@Converter
+			public class UserConverter {
+				
+				public UserEntity toEntity(UserRegisterRequest request) {
+					
+					// request 가 null 값이라면 예외 발생
+					// -> ApiExceptionHandler 가 잡아서 stack trace 찍어주고
+					//    해당 response 가 내려감
+					return Optional.ofNullable(request)
+						.map(it -> {
+							// to entity
+							return UserEntity.builder()
+								.name(request.getName())
+								.email(request.getEmail())
+								.password(request.getPassword())
+								.address(request.getAddress())
+								.build();
+						})
+						.orElseThrow(() -> new ApiException(ErrorCode.NULL_POINT, "UserRegisterRequest Null"));
+				}
+			}
+			
+			-------------------------------------------------------------------------------
+			
+			@Business
+			@RequiredArgsConstructor
+			public class UserBusiness {
+				
+				private final UserService userService;
+				private final UserConverter userConverter;
+				
+				/*
+				* 사용자에 대한 가입처리 로직
+				* 1. request 데이터 -> entity
+				* 2. entity -> save
+				* 3. save 된 entity -> response
+				* 4. response 를 리턴
+				* */
+				public UserResponse register(UserRegisterRequest request) {
+					
+					var entity = userConverter.toEntity(request);
+					
+				}
+			}
+			
+			-------------------------------------------------------------------------------
+			
+			@RequiredArgsConstructor
+			@Service
+			public class UserService {
+				
+				private final UserRepository userRepository;
+				
+				public UserEntity register(UserEntity userEntity) {
+					return Optional.ofNullable(userEntity)
+						.map(it -> {
+							userEntity.setStatus(UserStatus.REGISTERED);
+							userEntity.setRegisteredAt(LocalDateTime.now());
+							return userRepository.save(userEntity);
+						})
+						.orElseThrow(() -> new ApiException(ErrorCode.NULL_POINT, "User Entity Null"));
+				}
+			}
+
+			-------------------------------------------------------------------------------
+
+			@Business
+			@RequiredArgsConstructor
+			public class UserBusiness {
+				
+				private final UserService userService;
+				private final UserConverter userConverter;
+				
+				/*
+				* 사용자에 대한 가입처리 로직
+				* 1. request 데이터 -> entity
+				* 2. entity -> save
+				* 3. save 된 entity -> response
+				* 4. response 를 리턴
+				* */
+				public UserResponse register(UserRegisterRequest request) {
+					
+					var entity = userConverter.toEntity(request);
+					var newEntity = userService.register(entity);
+					var response = userConverter.toResponse(newEntity); // alt+Enter 로 메소드 생성
+					return response;
+				}
+			}
+			
+			-------------------------------------------------------------------------------
+			
+			@Data
+			@NoArgsConstructor
+			@AllArgsConstructor
+			@Builder
+			public class UserResponse {
+				
+				private Long id;
+				
+				private String name;
+				
+				private String email;
+				
+				private UserStatus status;
+				
+				private String address;
+				
+				private LocalDateTime registeredAt;
+				
+				private LocalDateTime unregisteredAt;
+				
+				private LocalDateTime lastLoginAt;
+			}
+			
+			-------------------------------------------------------------------------------
+			
+			@RequiredArgsConstructor
+			@Converter
+			public class UserConverter {
+				
+				public UserEntity toEntity(UserRegisterRequest request) {
+					
+					// request 가 null 값이라면 예외 발생
+					// -> ApiExceptionHandler 가 잡아서 stack trace 찍어주고
+					//    해당 response 가 내려감
+					return Optional.ofNullable(request)
+						.map(it -> {
+							// to entity
+							return UserEntity.builder()
+								.name(request.getName())
+								.email(request.getEmail())
+								.password(request.getPassword())
+								.address(request.getAddress())
+								.build();
+						})
+						.orElseThrow(() -> new ApiException(ErrorCode.NULL_POINT, "UserRegisterRequest Null"));
+				}
+				
+				public UserResponse toResponse(UserEntity userEntity) {
+					
+					return Optional.ofNullable(userEntity)
+						.map(it -> {
+							// to response
+							return UserResponse.builder()
+								.id(userEntity.getId())
+								.name(userEntity.getName())
+								.status(userEntity.getStatus())
+								.email(userEntity.getEmail())
+								.address(userEntity.getAddress())
+								.registeredAt(userEntity.getRegisteredAt())
+								.unregisteredAt(userEntity.getUnregisteredAt())
+								.lastLoginAt(userEntity.getLastLoginAt())
+								.build();
+						})
+						.orElseThrow(() -> new ApiException(ErrorCode.NULL_POINT, "UserEntity Null"));
+				}
+			}
+			
+			-------------------------------------------------------------------------------
+			
+			@Business
+			@RequiredArgsConstructor
+			public class UserBusiness {
+				
+				private final UserService userService;
+				private final UserConverter userConverter;
+				
+				/*
+				* 사용자에 대한 가입처리 로직
+				* 1. request 데이터 -> entity
+				* 2. entity -> save
+				* 3. save 된 entity -> response
+				* 4. response 를 리턴
+				* */
+				public UserResponse register(UserRegisterRequest request) {
+					
+					var entity = userConverter.toEntity(request);
+					var newEntity = userService.register(entity);
+					var response = userConverter.toResponse(newEntity);
+					return response;
+					
+					// 위의 코드를 람다식으로 변환
+			/*        return Optional.ofNullable(request)
+						.map(userConverter::toEntity)
+						.map(userService::register)
+						.map(userConverter::toResponse)
+						.orElseThrow(() -> new ApiException(ErrorCode.NULL_POINT, "request null"));*/
+				}
+			}
+			
+			-------------------------------------------------------------------------------
+			
+			@RequiredArgsConstructor
+			@RestController
+			@RequestMapping("/open-api/user")
+			public class UserOpenApiController {
+				
+				private final UserBusiness userBusiness;
+				
+				// 사용자 가입 요청
+				@PostMapping("/register")
+				public Api<UserResponse> register(
+					@Valid
+					@RequestBody Api<UserRegisterRequest> request
+				) {
+					var response = userBusiness.register(request.getBody());
+					return Api.OK(response);
+				}
+			}
+			
+			-------------------------------------------------------------------------------
+
+		3) 흐름 정리
+			- UserOpenApiController : 사용자 요청 들어옴
+			- UserRegisterRequest : 사용자 가입에 대한 validation 확인
+			- UserBusiness : 등록 비지니스 로직 처리(register 메소드)
+			- UserService : 도메인 로직을 처리(사용자 가입을 처리)
+				UserEntity가 들어오고 나가는 곳!!
+
+		4) 스웨거로 확인
+			localhost:8080/swagger-ui/index.html
+			- body에 임의값 입력.
+				{
+				  "result": {
+					"result_code": 0,
+					"result_message": "string",
+					"result_description": "string"
+				  },
+				  "body": {
+					"name": "스티브",
+					"email": "steve@gmail.com",
+					"address": "서울시 강남구",
+					"password": "1234"
+				  }
+				}
+			- excute 하면 실제 DB에서 select * from user; 로 확인 가능!!
+			
+			
+4. 사용자 서비스 로직 - 2
+	- 회원가입
+	
+	(1) 로그인 기능 추가
+	
+		1) UserOpenApiController 수정
+	
+			// 로그인
+			@PostMapping("/login")
+			public Api<UserResponse> login(
+				@Valid
+				@RequestBody Api<UserLoginRequest> request
+			) {
+				var response = userBusiness.login(request.getBody());
+				return Api.OK(response);
+			}
+			
+		2) api.domain.user.controller.model 패키지에 UserLoginRequest 클래스 생성
+		
+			@Data
+			@NoArgsConstructor
+			@AllArgsConstructor
+			public class UserLoginRequest {
+				
+				@NotBlank
+				private String email;
+				
+				@NotBlank
+				private String password;
+			}
+		
+		3) UserBusiness 수정
+		
+			@Business
+			@RequiredArgsConstructor
+			public class UserBusiness {
+				. . . 
+				
+				/*
+				* 1. email, password 를 가지고 사용자 체크
+				* 2. user entity 떨어지면 로그인 확인
+				* 3. token 생성
+				* 4. token 을 response 로 내려줌
+				* */
+				public void login(UserLoginRequest request) {
+					
+				}
+			}
+			
+		4) UserService 수정
+		
+			public UserEntity login(
+				String email,
+				String password
+			) {
+				var entity = getUserWithThrow(email, password);
+				return entity;
+			}
+			
+			public UserEntity getUserWithThrow(
+				String email,
+				String password
+			) {
+				return userRepository.findFirstByEmailAndPasswordAndStatusOrderByIdDesc(
+					email,
+					password,
+					UserStatus.REGISTERED
+				).orElseThrow(() -> new ApiException(UserErrorCode.USER_NOT_FOUND));
+			}
+			
+		5) UserBusiness 수정
+		
+			/*
+			* 1. email, password 를 가지고 사용자 체크
+			* 2. user entity 떨어지면 로그인 확인
+			* 3. token 생성
+			* 4. token 을 response 로 내려줌
+			* */
+			public UserResponse login(UserLoginRequest request) {
+				var userEntity = userService.login(request.getEmail(), request.getPassword());
+				// 사용자 없으면 throw
+				
+				// (TODO) 사용자 존재 -> 토큰 생성 로직으로 변경하기
+				return userConverter.toResponse(userEntity);
+			}
+			
+		-> 스웨거에서 확인
+			http://localhost:8080/swagger-ui/index.html
+			
+			open-api/user/login 탭에서 request body에 email, password를 DB에 있는 값으로 입력하면
+			로그인 성공 / 비번 틀리면 "사용자를 찾을 수 없음"
+		
+5. JWT 토큰 서비스 로직 적용하기
+
+	- jwt 토큰 관련 dependencies 적용(Maven repository)
+		> jjwt-api 검색 -> 0.11.5(gradle)
+		> jjwt-impl 검색 -> 0.11.5(gradle)
+		> jjwt-jackson 검색 -> 0.11.5(gradle)
+		
+		implementation group: 'io.jsonwebtoken', name: 'jjwt-api', version: '0.11.5'
+		runtimeOnly group: 'io.jsonwebtoken', name: 'jjwt-impl', version: '0.11.5'
+		runtimeOnly group: 'io.jsonwebtoken', name: 'jjwt-jackson', version: '0.11.5'
+		
+	- api 프로젝트의 build.gradle 파일에 dependencies에 추가 후 새로고침
+
+	(1) api.domain.token.helper 패키지 생성 후 TokenHelperIfs 인터페이스 생성
+		- 외부 라이브러리의 종속성을 가지는 것을 사용.
+		
+		public interface TokenHelperIfs {
+			
+			TokenDto issueAccessToken(Map<String, Object> data);
+			TokenDto issueRefreshToken(Map<String, Object> data);
+			Map<String, Object> validationTokenWithThrow(String token);
+		}
+		
+	(2) token 패키지 하위에 ifs, model 패키지 생성.
+		
+		1) model 패키지에 TokenDto 클래스 생성
+
+			@Data
+			@NoArgsConstructor
+			@AllArgsConstructor
+			@Builder
+			public class TokenDto {
+				
+				private String token;
+				private LocalDateTime expiredAt;
+			}
+			
+			-> TokenHelperIfs를 ifs 패키지로 이동
+			-> Alt+Enter 로 TokenDto 활성화
+			
+		2) token.helper 패키지에 JwtTokenHelper 클래스 생성
+			- alt+shift+P 로 메소드 자동 구현
+		
+			@Component
+			public class JwtTokenHelper implements TokenHelperIfs {
+				@Override
+				public TokenDto issueAccessToken(Map<String, Object> data) {
+					return null;
+				}
+				
+				@Override
+				public TokenDto issueRefreshToken(Map<String, Object> data) {
+					return null;
+				}
+				
+				@Override
+				public Map<String, Object> validationTokenWithThrow(String token) {
+					return null;
+				}
+			}
+			
+		3) application.yaml(api) 추가
+
+			spring:
+			  jpa:
+				show-sql: true
+				properties:
+				  hibernate:
+					format_sql: false
+					dialect: org.hibernate.dialect.MySQL8Dialect
+					ddl-auto: validate
+			  datasource:
+				url: jdbc:mysql://localhost:3306/delivery?useSSL=false&useUnicode=true&allowPublicKeyRetrieval=true
+				driver-class-name: com.mysql.cj.jdbc.Driver
+				username: root
+				password: admin123!
+
+			token:
+			  secret:
+				key: SpringBootJWTHelperTokenSecretKeyValue123!@#
+			  access-token:
+				plus-hour: 1
+			  refresh-token:
+				plus-hour: 12
+				
+		4) JwtTokenHelper 추가
+			- api.common.error에 토큰에러 추가(UserErrorCode 복붙 후 수정)
+				/*
+				* Token 의 경우 2000번대 에러코드 사용
+				* */
+
+				@AllArgsConstructor
+				@Getter
+				public enum TokenErrorCode implements ErrorCodeIfs {
+					
+					INVALID_TOKEN(400, 2000, "유효하지 않은 토큰"),
+					EXPIRED_TOKEN(400, 2001, "만료된 토큰"),
+					TOKEN_EXCEPTION(400, 2002, "토큰 알수없는 에러"),
+					;
+					
+					private final Integer httpStatusCode;
+					private final Integer errorCode;
+					private final String description;
+				}
+			--------------------------------------------------------------------
+			
+			@Component
+			public class JwtTokenHelper implements TokenHelperIfs {
+				
+				// application.yaml 파일 참조
+				@Value("${token.secret.key}")
+				private String secretKey;
+				
+				@Value("${token.access-token.plus-hour}")
+				private Long accessTokenPlusHour;
+				
+				@Value("${token.refresh-token.plus-hour}")
+				private Long refreshTokenPlusHour;
+				
+				@Override
+				public TokenDto issueAccessToken(Map<String, Object> data) {
+					var expiredLocalDataTime = LocalDateTime.now().plusHours(accessTokenPlusHour);
+					var expiredAt = Date.from(
+						expiredLocalDataTime.atZone(
+							ZoneId.systemDefault()
+						).toInstant()
+					);
+					
+					var key = Keys.hmacShaKeyFor(secretKey.getBytes());
+					var jwtToken = Jwts.builder()
+						.signWith(key, SignatureAlgorithm.HS256)
+						.setClaims(data)
+						.setExpiration(expiredAt)
+						.compact();
+					
+					return TokenDto.builder()
+						.token(jwtToken)
+						.expiredAt(expiredLocalDataTime)
+						.build();
+				}
+				
+				@Override
+				public TokenDto issueRefreshToken(Map<String, Object> data) {
+					var expiredLocalDataTime = LocalDateTime.now().plusHours(refreshTokenPlusHour);
+					var expiredAt = Date.from(
+						expiredLocalDataTime.atZone(
+							ZoneId.systemDefault()
+						).toInstant()
+					);
+					
+					var key = Keys.hmacShaKeyFor(secretKey.getBytes());
+					var jwtToken = Jwts.builder()
+						.signWith(key, SignatureAlgorithm.HS256)
+						.setClaims(data)
+						.setExpiration(expiredAt)
+						.compact();
+					
+					return TokenDto.builder()
+						.token(jwtToken)
+						.expiredAt(expiredLocalDataTime)
+						.build();
+				}
+				
+				@Override
+				public Map<String, Object> validationTokenWithThrow(String token) {
+					var key = Keys.hmacShaKeyFor(secretKey.getBytes());
+					var parser = Jwts.parserBuilder()
+						.setSigningKey(key)
+						.build();
+					
+					try {
+						var result = parser.parseClaimsJws(token);
+						return new HashMap<String, Object>(result.getBody());
+					} catch (Exception e) {
+						if (e instanceof SignatureException) {
+							// 토큰이 유효하지 않을 때
+							throw new ApiException(TokenErrorCode.INVALID_TOKEN, e);
+						} else if (e instanceof ExpiredJwtException) {
+							// 만료된 토큰일 때 발생
+							throw new ApiException(TokenErrorCode.EXPIRED_TOKEN, e);
+						} else {
+							// 그 외 에러
+							throw new ApiException(TokenErrorCode.TOKEN_EXCEPTION, e);
+						}
+					}
+					
+				}
+			}
+			
+			-> 이러한 예외는 ApiException으로 보내져서 stack trace를 찍고 response를 만들어서
+				내려감.
+
+
+6. 사용자 로그인 토큰 발행 적용하기.
+	
+	- api.domain.token.controller.model 패키지 생성
+	
+	(1) model 패키지에 TokenResponse 클래스 생성
+
+		@Data
+		@Builder
+		@NoArgsConstructor
+		@AllArgsConstructor
+		public class TokenResponse {
+			
+			private String accessToken;
+			private LocalDateTime accessTokenExpiredAt;
+			private String refreshToken;
+			private LocalDateTime refreshTokenExpiredAt;
+		}
+		
+	(2) token.business 패키지 생성 후 TokenBusiness 클래스 생성
+	
+		@Business
+		@RequiredArgsConstructor
+		public class TokenBusiness {
+
+			
+		}
+
+	(3) token.converter 패키지 생성 후 TokenConverter 클래스 생성
+			
+		@RequiredArgsConstructor
+		@Converter
+		public class TokenConverter {
+			
+			public TokenResponse toResponse(
+				TokenDto accessToken,
+				TokenDto refreshToken
+			){
+				Objects.requireNonNull(accessToken, () -> {
+					throw new ApiException(ErrorCode.NULL_POINT);
+				});
+				Objects.requireNonNull(refreshToken, () -> {
+					throw new ApiException(ErrorCode.NULL_POINT);
+				});
+				
+				return TokenResponse.builder()
+					.accessToken(accessToken.getToken())
+					.accessTokenExpiredAt(accessToken.getExpiredAt())
+					.refreshToken(refreshToken.getToken())
+					.refreshTokenExpiredAt(refreshToken.getExpiredAt())
+					.build();
+			}
+		}
+		
+	(4) token.service 패키지 생성 후 TokenService 클래스 작성
+
+		/*
+		* token 에 대한 도메인 로직 담당
+		* */
+
+		@Service
+		@RequiredArgsConstructor
+		public class TokenService {
+			
+			private final TokenHelperIfs tokenHelperIfs;
+			
+			public TokenDto issueAccessToken(Long userId) {
+				var data = new HashMap<String, Object>();
+				data.put("userId", userId);
+				return tokenHelperIfs.issueAccessToken(data);
+			}
+			
+			public TokenDto issueRefreshToken(Long userId) {
+				var data = new HashMap<String, Object>();
+				data.put("userId", userId);
+				return tokenHelperIfs.issueAccessToken(data);
+			}
+			
+			public Long validationToken(String token) {
+				var map = tokenHelperIfs.validationTokenWithThrow(token);
+				var userId = map.get("userId");
+				
+				Objects.requireNonNull(userId, () -> {
+					throw new ApiException(ErrorCode.NULL_POINT);
+				});
+				
+				return Long.parseLong(userId.toString());
+			}
+		}
+		
+	(5) token.business 패키지에 TokenBusiness 추가
+	
+		@Business
+		@RequiredArgsConstructor
+		public class TokenBusiness {
+			
+			private final TokenService tokenService;
+			private final TokenConverter tokenConverter;
+
+			/*
+			* 1. user entity 에서 userId 추출
+			* 2. access, refresh 토큰 발행
+			* 3. converter 를 통해서 token response 로 변경
+			* */
+			public TokenResponse issueToken(UserEntity userEntity) {
+				
+				return Optional.ofNullable(userEntity)
+					.map(ue -> {
+						return ue.getId();
+					})
+					.map(userId->{
+						var accessToken = tokenService.issueAccessToken(userId);
+						var refreshToken = tokenService.issueRefreshToken(userId);
+						
+						return tokenConverter.toResponse(accessToken, refreshToken);
+					})
+					.orElseThrow(() -> new ApiException(ErrorCode.NULL_POINT));
+			}
+		}
+		
+	(6) api.domain.user.business 패키지에 UserBusiness 추가
+	
+		@Business
+		@RequiredArgsConstructor
+		public class UserBusiness {
+			
+			private final UserService userService;
+			private final UserConverter userConverter;
+			private final TokenBusiness tokenBusiness;
+			
+			...
+			
+			/*
+			* 1. email, password 를 가지고 사용자 체크
+			* 2. user entity 떨어지면 로그인 확인
+			* 3. token 생성
+			* 4. token 을 response 로 내려줌
+			* */
+			public TokenResponse login(UserLoginRequest request) {
+				var userEntity = userService.login(request.getEmail(), request.getPassword());
+				// 사용자 없으면 throw
+				
+				// (TODO) 사용자 존재 -> 토큰 생성 로직으로 변경하기
+				var tokenResponse = tokenBusiness.issueToken(userEntity);
+				
+				return tokenResponse;
+			}
+		}
+
+
+	(7) api.domain.user.controller 패키지에 UserOpenApiController 수정
+		- 메소드 타입 TokenResponse로 변환
+		
+			// 로그인
+			@PostMapping("/login")
+			public Api<TokenResponse> login(
+				@Valid
+				@RequestBody Api<UserLoginRequest> request
+			) {
+				var response = userBusiness.login(request.getBody());
+				return Api.OK(response);
+			}
+		}
+
+
+7. 사용자 인증 로직 적용하기
+
+	- Chrome Store 에서 "mod header" 검색해서 설치
+
+	(1) api.domain.user.controller.model 패키지에 UserApiController 수정
+	
+		@RequiredArgsConstructor
+		@RestController
+		@RequestMapping("/api/user")
+		public class UserApiController {
+			
+			private final UserBusiness userBusiness;
+			
+			@GetMapping("/me")
+			public Api<UserResponse> me(){
+				var response = userBusiness.me(null);
+				
+				return Api.OK(response);
+			}
+		}
+		
+		-> me()에다가 alt+Enter 로 메소드 구현
+		
+	(2) UserBusiness 클래스 수정
+	
+		public UserResponse me(Long userId) {
+			var userEntity = userService.getUserWithThrow(userId);
+			var response = userConverter.toResponse(userEntity);
+			
+			return response;
+		}
+		
+		-> alt+Enter로 메소드 구현
+		
+	(3) UserService 클래스 수정
+	
+		// Overloading
+		public UserEntity getUserWithThrow(
+			Long userId
+		) {
+			return userRepository.findFirstByIdAndStatusOrderByIdDesc(
+				userId,
+				UserStatus.REGISTERED
+			).orElseThrow(() -> new ApiException(UserErrorCode.USER_NOT_FOUND));
+		}
+		
+	(4) 테스트
+		- 스웨거로 steve@gmail.com / 1234 치면 토큰값 확인가능
+		- 해당 토큰값 복사 후 mod header에 name : authorization-token / value : 토큰값 넣어 줌.
+		
+	(5) api.interceptor 패키지에 AuthorizationInterceptor 수정
+	
+		- api.common.error 패키지에 TokenErrorCode 추가
+			INVALID_TOKEN(400, 2000, "유효하지 않은 토큰"),
+			EXPIRED_TOKEN(400, 2001, "만료된 토큰"),
+			TOKEN_EXCEPTION(400, 2002, "토큰 알수없는 에러"),
+			AUTHORIZATION_TOKEN_NOT_FOUND(400, 2003, "인증 헤더 토큰 없음"),
+			;
+			
+			private final Integer httpStatusCode;
+			private final Integer errorCode;
+			private final String description;
+			
+		---------------------------------- 선행 -------------------------------------
+		
+		- api.domain.token.business 패키지에 TokenBusiness 수정
+			public Long validationAccessToken(String accessToken) {
+				var userId = tokenService.validationToken(accessToken);
+				return userId;
+			}
+		
+		---------------------------------- 선행 -------------------------------------
+		
+		public class AuthorizationInterceptor implements HandlerInterceptor {
+			
+			private final TokenBusiness tokenBusiness;
+			
+			@Override
+			public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
+			
+				log.info("Authorization Interceptor : {}", request.getRequestURI());
+				
+				// WEB 즉 Chrome의 경우 GET, POST등 을 요청하기 전 OPTION API를 요청을 해서
+				// 해당 메소드를 지원하는지 체크. = 통과
+				if (HttpMethod.OPTIONS.matches(request.getMethod())) {
+					return true;
+				}
+				
+				// js, html, png 등 resource 를 요청하는 경우 통과
+				if (handler instanceof ResourceHttpRequestHandler) {
+					return true;
+				}
+				
+				// TODO Header 검증
+				var accessToken = request.getHeader("authorization-token");
+				if(accessToken == null){
+					throw new ApiException(TokenErrorCode.AUTHORIZATION_TOKEN_NOT_FOUND);
+				}
+				
+				var userId = tokenBusiness.validationAccessToken(accessToken);
+				
+				if(userId != null) {
+					// 한가지 요청에 대해 유효하게 글로벌하게 저장할 수 있는 영역
+					var requestContext = Objects.requireNonNull(RequestContextHolder.getRequestAttributes());
+					
+					requestContext.setAttribute("userId", userId, RequestAttributes.SCOPE_REQUEST);
+					return true;    // 인증 성공
+				}
+				
+				throw new ApiException(ErrorCode.BAD_REQUEST, "인증 실패");
+			}
+		}
+
+	(6) api.domain.user.controller 패키지에 UserApiController 수정
+	
+		public class UserApiController {
+			
+			private final UserBusiness userBusiness;
+			
+			@GetMapping("/me")
+			public Api<UserResponse> me(){
+				
+				var requestContext = Objects.requireNonNull(RequestContextHolder.getRequestAttributes());
+				var userId = requestContext.getAttribute("userId", RequestAttributes.SCOPE_REQUEST);
+				var response = userBusiness.me(Long.parseLong(userId.toString()));
+				
+				return Api.OK(response);
+			}
+		}
+	
+	-> 스웨거에서 user-api-controller 에서 다시 execute 시키면 mod header의 사용저 정보를 받아올 수 있음.
+	
+	(7) 코드 개선
+		
+		1) api.common.annotation 패키지에 UserSession 어노테이션 생성
+		
+			@Target(ElementType.TYPE_PARAMETER) // 파라미터에 사용
+			@Retention(RetentionPolicy.RUNTIME) // 실행 중 사용
+			public @interface UserSession {
+				
+			}
+	
+		2) api.domain.user.model 패키지에 User 클래스 생성
+			- UserEntity()에 있는 내용 복사
+
+			@Data
+			@NoArgsConstructor
+			@AllArgsConstructor
+			@Builder
+			public class User {
+				
+				private Long id;
+				private String name;
+				private String email;
+				private String password;
+				private UserStatus status;
+				private String address;
+				private LocalDateTime registeredAt;
+				private LocalDateTime unregisteredAt;
+				private LocalDateTime lastLoginAt;
+			}
+
+		3) api.resolver 패키지에 UserSessionResolver 클래스 생성
+			- 상속 받은 후 alt+Enter 로 오버라이드 메소드 자동 생성
+
+			@Component
+			@RequiredArgsConstructor
+			public class UserSessionResolver implements HandlerMethodArgumentResolver {
+				
+				private final UserService userService;
+				
+				@Override
+				public boolean supportsParameter(MethodParameter parameter) {
+					// 지원하는 파라미터 체크, 어노테이션 체크
+					
+					// 1. 컨트롤러들이 UserSession 어노테이션이 있는지 체크
+					var annotation = parameter.hasParameterAnnotation(UserSession.class);
+					// 2. 파라미터의 타입 체크(domain.user.model.User)
+					//  - 매개변수로 들어오는 파라미터가 User 클래스가 맞는지?
+					var parameterType = parameter.getParameterType().equals(User.class);
+					
+					return (annotation && parameterType);
+				}
+				
+				@Override
+				public Object resolveArgument(MethodParameter parameter, ModelAndViewContainer mavContainer, NativeWebRequest webRequest, WebDataBinderFactory binderFactory) throws Exception {
+					// supportsParameter() 에서 true 반환시 여기 실행
+					
+					// requestContextHolder 에서 찾아오기(Interceptor 에서 넣었던 userId)
+					var requestContext = RequestContextHolder.getRequestAttributes();
+					var userId = requestContext.getAttribute("userId", RequestAttributes.SCOPE_REQUEST);
+					var userEntity = userService.getUserWithThrow(Long.parseLong(userId.toString()));
+					
+					// 사용자 정보 세팅
+					//  User 객체에 UserEntity 내용을 넣어줌
+					return User.builder()
+						.id(userEntity.getId())
+						.name(userEntity.getName())
+						.email(userEntity.getEmail())
+						.status(userEntity.getStatus())
+						.password(userEntity.getPassword())
+						.address(userEntity.getAddress())
+						.registeredAt(userEntity.getRegisteredAt())
+						.unregisteredAt(userEntity.getUnregisteredAt())
+						.lastLoginAt(userEntity.getLastLoginAt())
+						.build();
+					
+				}
+			}
+			
+		4) api.config.web 패키지에 WebConfig 수정
+
+			@Configuration
+			@RequiredArgsConstructor
+			public class WebConfig implements WebMvcConfigurer {
+				
+				private final AuthorizationInterceptor authorizationInterceptor;
+				private final UserSessionResolver userSessionResolver;
+				
+				...
+				
+				// addReso 까지 치고 어시스트 사용!
+				@Override
+				public void addArgumentResolvers(List<HandlerMethodArgumentResolver> resolvers) {
+					resolvers.add(userSessionResolver);
+				}
+			}
+
+		5) api.domain.user.controller 에 UserApiController 수정
+
+			@GetMapping("/me")
+			public Api<UserResponse> me(
+				// 어노테이션 UserSession, User 타입 -> UserSessionResolver 동작
+				@UserSession User user
+				){
+				
+				var response = userBusiness.me(user);
+				return Api.OK(response);
+			}
+
+		6) api.domain.user.business 에 UserBusiness 수정
+
+			public UserResponse me(
+				User user
+			) {
+				var userEntity = userService.getUserWithThrow(user.getId());
+				var response = userConverter.toResponse(userEntity);
+				
+				return response;
+			}
+
+----------------------------------------------------------------------------------------------------------------------

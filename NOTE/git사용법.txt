@@ -1,0 +1,26 @@
+프로젝트 터미널 선택 : alt + `
+터미널 열기 : ctrl + `
+
+1. git init
+
+2. git config --global user.name "유저 이름"
+
+3. git config --global user.email "가입할 때 사용한 메일 주소"
+
+4. git remote add origin 복사한 링크
+
+5. git pull origin main
+
+6. git branch 브랜치명
+
+7. git checkout 브랜치명
+
+8. git add .
+
+9. git commit -m "확인메세지"
+
+10. git push origin "브랜치명"
+
+----------------------------------------------------------------
+기타 명령어
+- git reset : add 로 스테이징한 변경사항을 취소

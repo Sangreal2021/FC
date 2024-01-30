@@ -1,0 +1,235 @@
+[Ch.04 Memory DataBase]
+
+※ Tips
+	(1) 인텔리제이 ctrl + shift + Enter(자동 완성) 안 먹힐 때
+		1) 파일 -> 설정 -> 키맵 -> 메인 메뉴 -> 편집 -> 찾기 -> 파일에서 찾기 우클릭 -> 단축키 추가 
+			-> Ctrl+Shift+F로 지정 -> 다시 파일에서 찾기 우클릭 후 기존 키맵 삭제
+		2) 파일 -> 캐쉬 무효화 후 인텔리제이 재시작
+	(2) 인텔리제이 한글화
+
+----------------------------------------------------------------------------------------------------------
+<memorydb 프로젝트>
+- 메모리에다 db를 쓰기 위해서는 repository(저장소와 연결된 인터페이스)를 생성.
+- 아래 프로젝트는 실제 DB가 아니라 서버를 종료하면 기존의 데이터는 사라짐.
+- 실제 프로젝트의 패턴 학습!
+
+1. Talend API Tester
+	(1) Create, Update
+		1) 주소(PUT)
+			http://localhost:8080/api/user
+		2) body
+			
+			{
+			  "name" : "유관순",
+			  "score" : 95
+			}
+		3) update
+			{
+			  "id" : 2,
+			  "name" : "유관순",
+			  "score" : 20
+			}
+		
+			
+	(2) FindAll - 위에 
+		1) 주소(GET)
+			http://localhost:8080/api/user/all
+		2) send
+			// 홍길동/100, 유관순/95 를 Send하고나서 바로 실행
+			-> 위에서 입력한 모든 데이터 출력
+	
+	(3) Delete
+		1) 주소(DELETE)
+			http://localhost:8080/api/user/id/1
+		2) Send -> 200 -> (2) 실행 -> 빈 배열 확인
+		
+	(4) FindOne
+		1) 주소(GET)
+			http://localhost:8080/api/user/id/3
+
+
+2. 사용자 10명 생성 후 점수가 70점 이상인 메소드 만들기.
+	(1) UserRepository 수정
+	
+	(2) TAT 에서 Score 생성(GET)
+		1) 주소 : http://localhost:8080/api/user/score?score=70
+		2) Query parameter 눌러서 score / 70 입력.
+		3) Create에서 User01/10 ~ User10/100까지 입력 후 FindAll로 10개 확인.
+		4) Score에서 실행해보면 70이상인 것만 출력!
+		
+		
+3. book 패키지 생성.
+	(1) book 패키지 안에 코드 작성.
+	
+	(2) TAT
+		1) Book Create 추가(POST)
+			- 주소 : http://localhost:8080/api/book
+			- body
+				{
+				  "name" : "JAVA",
+				  "category" : "IT",
+				  "amount" : 23000
+				}
+				{
+				  "name" : "Spring Boot",
+				  "category" : "IT",
+				  "amount" : 33000
+				}
+		2) Book findAll 추가(GET)
+			- 주소 : http://localhost:8080/api/book/all
+			- 실행시키면 위의 내용 모두 출력.
+
+----------------------------------------------------------------------------------------------------------
+<MySQL 설치> by Docker
+1. 주소
+	1) Docker Desktop - https://docs.docker.com/desktop/install/windows-install/
+	2) WorkBench - https://dev.mysql.com/downloads/workbench/
+2. 둘다 설치 후(기본 설치)
+	- docker의 경우 업데이트 필요한 경우
+		-> cmd창 열고 wsl --update
+3. 도커 실행시켜 놓기
+
+4. 인텔리제이
+	(1) 파일 -> 새 프로젝트
+		- 이름 : docker-compose
+		- 경로 : 기존 디렉토리\docker-compose
+	(2) 하단의 터미널 창 열기(alt + F12)
+	(3) docker 입력 후 정상적으로 설치됬는지 확인.
+	(4) 조금 기다리면 docker-plugin 설치하라는 알림 뜨고 설치 진행.
+	(5) mysql 폴더 생성 -> 그 안에 docker-compose.yaml 파일 생성
+		version: "3"
+		services:
+		  db:
+			image: mysql:8.0.26
+			restart: always
+			command:
+			  - --lower_case_table_names=1
+			  - --character-set-server=utf8mb4
+			  - --collation-server=utf8mb4_unicode_ci
+			container_name: mysql
+			ports:
+			  - "3306:3306"
+			environment:
+			  - MYSQL_DATABASE=mydb
+			  - MYSQL_ROOT_PASSWORD=admin123!
+			  - TZ=Asia/Seoul
+			volumes:
+			  - D:\private\study\mysql:/var/lib/mysql
+	(6) services 오른쪽 화살표 누르면 실행.(미리 volumes에 지정한 경로에 폴더 생성)
+		- volumes 지정한 곳에 mysql 설치 및 docker desktop의 container에서도 확인 가능.
+		
+5. WorkBench 설치
+	(1) 디폴트 설치
+	(2) + 버튼 눌러서 추가
+		- Connection Name : localhost
+		- Hostname : 127.0.0.1
+		- Port : 3306
+		- Username : root
+	(3) Test Connection 누르면 비번 입력창 -> docker-compose.yaml에 비번을 입력
+	(4) localhost에 접속하면 왼쪽 창에 Schemas 탭 -> mydb 확인.
+	(5) mydb 더블클릭으로 활성화 -> Tables 우클릭 후 새 테이블 생성
+		- Charset/Collation : utf8mb4/utf8mb4_bin
+	
+
+----------------------------------------------------------------------------------------------------------
+<SQL>
+
+1. DDL(Data Definition Language) : 데이터를 정의
+	- create : 테이블의 생성
+	- alter : 테이블의 구조 변경
+	- drop : 테이블 삭제
+	- rename : 테이블 이름 변경
+	- comment : 테이블 및 컬럼 주석 추가
+	- truncate : 데이터 초기화
+
+2. DML(Data Manipulation Language) : 데이터를 조작
+	- select : 데이터를 조회
+	- insert : 데이터를 삽입
+	- update : 데이터 업데이트
+	- delete : 데이터 삭제
+	
+3. DCL(Data Control Language) : 데이터 제어
+	- grant : 특정 DB 사용자에게 권한 부여
+	- revoke : 특정 DB 사용자의 권한 회수
+	- commit : 트랜잭션(transaction)의 작업이 정상적으로 완료
+	- rollback : 트랜잭션의 작업이 비정상적으로 종료되어 원래 상태로 복구
+	
+4. 명칭
+	파일 시스템			DB 모델링				RDB
+	-------------------------------------------------------------------------
+	파일(File)			엔티티(Entity)			테이블(Table)
+	레코드(Record)		튜플(Tuple)				행(Row)
+	키(Key)				유니크값(Identifier)	키(Primary Key),(Unique Key)
+	필드(Field)			어트리뷰트(Attribute)	컬럼(Column)
+
+5. WorkBench
+※ Dbeaver로 실행하려면 최초 접속정보 입력하고 Driver properties 탭으로 가서
+  allowPublicKdyRetrieval 항목을 True로 변경후 완료 버튼을 누름.
+	-> Dbeaver에서 칼럼생성은 아래쪽 연필모양 오른쪽 버튼(Alt + Ins) 클릭
+
+	(1) user DB 생성(새로고침해야 보임)
+		create database user;
+	(2) 위에 DB 모양 아이콘 클릭 -> Schema 생성
+		Name : book
+	(3) user DB에 테이블 생성
+
+6. 데이터 타입 매칭
+
+	(1) 문자 타입
+	Type			JAVA		설명
+	--------------------------------------------------------------------------
+	CHAR(N)			String		고정 길이의 문자열 데이터
+	VARCHAR(N)		String		가변 길이의 문자열 데이터(공간 활용도 Good)
+	TINYTEXT(N)		String		문자열 데이터(255)
+	TEXT(N)			String		문자열 데이터(65535)
+	MEDIUMTEXT(N)	String		문자열 데이터(16777215)
+	LONGTEXT(N)		String		문자열 데이터(4294967295)
+	JSON			String		JSON 문자열 데이터(빠른 인덱싱 가능)
+	
+	(2) 숫자 타입
+	Type			JAVA			설명
+	--------------------------------------------------------------------------
+	TINYINT(N)		Integer, int	정수형 데이터(-128 ~ +127, 0 ~ 255)
+	SMALLINT		Integer, int	정수형 데이터(-21768 ~ +32767, 0 ~ 65536)
+	MEDIUMINT		Integer, int	정수형 데이터
+	INT				Integer, int	정수형 데이터
+	BIGINT			Long, long		정수형 데이터(무제한 수 표현)
+	FLOAT			Float, float	부동소수점 데이터
+	DECIMAL			BigDecimal		고정 소수형 데이터(금액 계산시)
+	DOUBLE			Double, double	부동 소수형 데이터
+	
+	(3) 시간 타입
+	Type			JAVA				설명
+	-------------------------------------------------------------------------------
+	DATE			Date,LocalDate		날짜(년도,월,일) 형태 기간 데이터
+	TIME			Time, LocalTime		시간(시,분,초,나노초) 형태 데이터
+	DATETIME		DateTime,			날짜와 시간 데이터
+					LocalDateTime
+	TIMESTAMP		DateTime,			날짜와 시간 데이터, Time Zone의 속성을 사용
+					LocalDateTime
+	Year			Year				년도 표현 데이터 타입
+	
+	(4) 기타 타입
+	Type			JAVA				설명
+	-------------------------------------------------------------------------------
+	BINARY(N)		byte[]				CHAR 형태의 이진 타입
+	BYTE(N)			byte[]				CHAR 형태의 이진 타입
+	VARBINARY(N)	byte[]				VARCHAR 형태의 이진 타입
+	TINYBLOB(N)		byte[]				이진데이터 타입(255)
+	BLOB(N)			byte[]				이진데이터 타입(65535)
+	MEDIUMBLOB(N)	byte[]				이진데이터 타입(16777215)
+	LONGBLOB(N)		byte[]				이진데이터 타입(4294967295)
+	
+
+7. Spring Data JPA
+	- JDBC(Java DataBase Connectivity)
+		자바 언어로 데이터베이스 프로그래밍을 하기 위한 라이브러리.(불편함)
+	- JPA는 JAVA ORM(Object Relational Mapping) 기술에 대한 인터페이스.
+	- ORM : 객체와 DB의 관계를 매핑하는 방법.
+	- Hibernate
+		JPA의 인터페이스를 구현한 라이브러리
+		ex) JPA, EclipseLink, DataNucleus, OpenJPA, TopLink 등
+	- Spring Data JPA(★★★)
+		Hibernate외 어떠한 라이브러리를 써도 반복되는 작업을 편리하게 사용하고,
+		Transaction 관리도 Spring에서 해주는 형태.
+	

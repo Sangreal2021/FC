@@ -1,0 +1,715 @@
+[Ch.06 Spring Data JPA]
+
+※ Spring Boot setting
+	- Groovy / Java / 3.2.1 / jpa / Lombok, Spring Web, JPA, MySQL
+
+----------------------------------------------------------------------------------------------------------
+<jpa 프로젝트>
+1. resources 폴더에 application.properties -> application.yaml로 변경 -> 내용 작성
+	※ tips
+		- ctrl+shift+T -> class선택 -> MySQL8로 뜨는 클래스 선택 -> 패키지경로.클래스명을 dialect에 넣기.
+		- application.yaml 에 구조의 간격(탭) 및 띄워쓰기는 반드시 아래와 일치되야 함.
+	
+	spring:
+	  jpa:
+		show-sql: true
+		properties:
+		  hibernate:
+			format_sql: true
+			use_sql_comments: true
+			dialect: org.hibernate.dialect.MySQL8Dialect
+			ddl-auto: validate
+	  datasource:
+		url: jdbc:mysql://localhost:3306/book_store?useSSL=false&useUnicode=true&allowPublicKeyRetrieval=true
+		driver-class-name: com.mysql.cj.jdbc.Driver
+		username: root
+		password: admin123!
+
+2. Dbeaver에 user DB에 user 테이블 생성
+	(1) 테이블 생성
+		CREATE TABLE `user`
+		(
+		`id` bigint(32) NOT NULL AUTO_INCREMENT comment 'index',
+		`name` varchar(50) NOT NULL comment '사용자이름',
+		`age` int NULL DEFAULT '1' comment '사용자나이',
+		`email` varchar(100) NULL DEFAULT '' comment '이메일주소',
+		PRIMARY KEY (`id`)
+		);
+	
+	(2) 내용 삽입
+		INSERT INTO `user`
+		(
+			`name`
+		)
+		VALUES
+		(
+			'이순신'
+		);
+
+		INSERT INTO `user`
+		(
+			`name`
+		)
+		VALUES
+		(
+			'유관순'
+		);
+
+		INSERT INTO `user`
+		(
+			`name`
+		)
+		VALUES
+		(
+			'강감찬'
+		);
+		
+3. 인텔리제이 user 패키지 내용 작성.
+
+
+4. 
+
+----------------------------------------------------------------------------------------------------------
+
+[Ch.07 JPA로의 변환]
+	1. 설정
+		- memorydb 프로젝트 열어서 application.properties -> application.yaml로 이름 변경.
+		- 위의 yaml파일의 내용을 복/붙
+		- build.gradle 파일에 dependencies에 아래처럼 추가(jpa, mysql 부분)
+			dependencies {
+				implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+				implementation 'org.springframework.boot:spring-boot-starter-web'
+				compileOnly 'org.projectlombok:lombok'
+				runtimeOnly 'com.mysql:mysql-connector-j'
+				annotationProcessor 'org.projectlombok:lombok'
+				testImplementation 'org.springframework.boot:spring-boot-starter-test'
+			}
+	2. DB 세팅
+		(1) Dbeaver에 book_store DB 생성(utf8mb4/utf8mb4_bin)
+		(2) application.yaml에 url 수정
+			url: jdbc:mysql://localhost:3306/book_store?useSSL=false&useUnicode=true&allowPublicKeyRetrieval=true
+	
+	3. memorydb 프로젝트 수정 
+		(1) user.db 패키지에 UserRepository 수정
+			public interface UserRepository extends JpaRepository<UserEntity, Long> {
+				
+				// select * from user where score > XX
+				List<UserEntity> findAllByScoreGreaterThanEqual(int score);
+				
+				// select * from user where score >= XX AND score <= XX
+				List<UserEntity> findAllByScoreGreaterThanEqualAndScoreLessThanEqual(int min, int max);
+			}
+			
+		(2) user.model 패키지에 UserEntity 수정
+			@Data
+			@NoArgsConstructor
+			@AllArgsConstructor
+			@Builder
+			@Entity(name = "user")
+			public class UserEntity {
+
+				@Id
+				@GeneratedValue(strategy = GenerationType.IDENTITY)
+				private Long id;
+				
+				private String name;
+				
+				private int score;
+			}
+			
+		(3) user.service 패키지에 UserService 수정
+			public void delete(UserEntity id){
+				userRepository.delete(id);
+			}
+			
+			-- 아래 추가
+			public List<UserEntity> filterScore(int score){
+		//        return null;
+				return userRepository.findAllByScoreGreaterThanEqual(score);
+			}
+
+			public List<UserEntity> filterScore(int min, int max) {
+				return userRepository.findAllByScoreGreaterThanEqualAndScoreLessThanEqual(min, max);
+			}
+			
+		(4) user.controller 패키지에 UserController 수정
+			-- 임시로 주석처리
+			// delete
+			@DeleteMapping("/id/{id}")
+			public void delete(
+					@PathVariable Long id
+			) {
+		//        userService.delete(id);
+			}
+			
+			-- 아래 추가
+			@GetMapping("/min_max")
+			public List<UserEntity> filterScore(
+					@RequestParam int min,
+					@RequestParam int max
+			) {
+				return userService.filterScore(min, max);
+			}
+			
+			
+			
+		(5) book.db.repository 패키지에 BookRepository 수정
+			public interface BookRepository extends JpaRepository<BookEntity, Long> {
+				
+			}
+		
+		(6) book.db.entity 패키지에 BookEntity 수정
+			@Data
+			@NoArgsConstructor
+			@AllArgsConstructor
+			@Builder
+			@Entity(name = "book")
+			public class BookEntity {
+
+				@Id
+				@GeneratedValue(strategy = GenerationType.IDENTITY)
+				private Long id;
+
+				private String name;
+
+				private String category;
+				
+				private BigDecimal amount;
+			}
+	
+	4. book_store DB에 book 테이블 생성 및 컬럼 생성.
+		(1) 타입 : utf8mb4/utf8mb4_bin
+		(2) 칼럼
+			- id / BIGINT(32) / Not Null(O) / AUTO_INCREMENT(O) / PK
+			- name / varchar(50) / Not Null(O)
+			- category / varchar(50) / Not Null(O)
+			- amount / DECIMAL(14,0) / default 0타입 : utf8mb4/utf8mb4_bin
+		(3) 쿼리
+			CREATE TABLE `book` (
+			  `id` bigint NOT NULL AUTO_INCREMENT,
+			  `name` varchar(50) NOT NULL,
+			  `category` varchar(50) NOT NULL,
+			  `amount` decimal(14,0) DEFAULT '0',
+			  PRIMARY KEY (`id`)
+			);
+	
+	5. book_store DB에 user 테이블 생성 및 컬럼 생성.
+		(1) 타입 : utf8mb4/utf8mb4_bin
+		(2) 칼럼
+			- id / BIGINT(32) / Not Null(O) / AUTO_INCREMENT(O) / PK
+			- name / varchar(50) / Not Null(O)
+			- score / INT / default 0
+		(3) 쿼리
+			CREATE TABLE book_store.`user` (
+				id BIGINT(32) auto_increment NOT NULL,
+				name varchar(50) NOT NULL,
+				score INT DEFAULT 0 NULL,
+				CONSTRAINT user_pk PRIMARY KEY (id)
+			);
+	
+	6. 인텔리제이 실행.
+		(1) memorydb 프로젝트 실행 -> TAT 에서 생성, 전체조회 가능.
+		(2) TAT에서 Score와 Score min max 둘다 실행해보기(인텔리제이 콘솔에서 쿼리 확인)
+		
+	7. 일반 쿼리문 대신 사용할 JPA 메소드
+		(1) 참조 주소(일반적으로 가장 추천!!!)
+			https://docs.spring.io/spring-data/jpa/docs/current-SNAPSHOT/reference/html/#jpa.query-methods.query-creation
+		
+	8. 일반 쿼리문을 쓰고싶을 때.
+		(1) memorydb.user.db 패키지 UserRepository 추가
+		
+			1) 쿼리로 작성
+				// select u 는 *
+				// user의 별칭 u, ?1은 첫번째 파라미터, ?2는 두번째 파라미터
+				@Query(
+					"select u from user u where u.score >= ?1 AND u.score <= ?2"
+				)
+				List<UserEntity> score(int min, int max);
+				
+			2) native 쿼리로 작성 (join 쿼리를 써야할 때 추천!!!)
+				@Query(
+					value = "select * from user u where u.score >= :min AND u.score <= :max",
+					nativeQuery = true
+				)
+				List<UserEntity> score(
+						@Param(value = "min") int min,
+						@Param(value = "max") int max
+				);
+
+		(2) UserService 수정
+			
+			public List<UserEntity> filterScore(int min, int max) {
+		//        return userRepository.findAllByScoreGreaterThanEqualAndScoreLessThanEqual(min, max);
+				return userRepository.score(min, max);
+			}
+
+----------------------------------------------------------------------------------------------------------
+
+[CH.08 간단한 게시판 프로젝트]
+
+1. 시스템 설계
+	(1) Language : Java 17
+	(2) Framework : Spring Boot 3.2.1
+	(3) DBMS : MySQL 8
+	(4) DB Library : JPA
+
+2. setting
+	(1) application.yaml 세팅
+		spring:
+		  jpa:
+			show-sql: true
+			properties:
+			  hibernate:
+				format_sql: true
+				use_sql_comments: true
+				dialect: org.hibernate.dialect.MySQL8Dialect
+				ddl-auto: validate
+		  datasource:
+			url: jdbc:mysql://localhost:3306/simple_board?useSSL=false&useUnicode=true&allowPublicKeyRetrieval=true
+			driver-class-name: com.mysql.cj.jdbc.Driver
+			username: root
+			password: admin123!
+			
+	(2) build.gradle 추가
+		dependencies {
+			implementation 'org.springframework.boot:spring-boot-starter-validation'
+			implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+			implementation 'org.springframework.boot:spring-boot-starter-web'
+			compileOnly 'org.projectlombok:lombok'
+			runtimeOnly 'com.mysql:mysql-connector-j'
+			annotationProcessor 'org.projectlombok:lombok'
+			testImplementation 'org.springframework.boot:spring-boot-starter-test'
+		}
+			
+	(3) Dbeaver에서 simple_board DB 생성.
+		-> 이후 인텔리제이의 SimpleBoardApplication 디버그모드 실행해서 정상작동 확인.
+		
+	(4) MySQL Workbench에서 ERD 생성
+		1) Table 생성
+			- board, post, reply 테이블 생성 후 "1:n"으로 각각 연결.
+			- 왼쪽에 Catalog Tree에 mydb 더블클릭 후 아래 Name에 simple_board 입력해서 바꿔줌.
+			  -> File -> export -> skip ~~ 전부 체크(FK 관련) -> Next -> 생성 쿼리 복사 -> dbeaver에서 실행.
+			  
+3. Java 코드 작성
+	(1) DB관련 작성 
+		- simpleboard 하위에 board, post, reply 패키지 생성
+		- 각각 패키지 하위에 db 패키지 만들어서 Entity와 Repository 작성
+	
+		1) board.db 패키지에 BoardEntity 클래스, BoardRepository 인터페이스 생성
+			
+			@Getter
+			@Setter
+			@NoArgsConstructor
+			@AllArgsConstructor
+			@Builder
+			@ToString
+			@Entity(name = "board")
+			public class BoardEntity {
+
+				@Id
+				@GeneratedValue(strategy = GenerationType.IDENTITY)
+				private Long id;
+
+				private String boardName;
+
+				private String status;
+			}
+			
+			----------------------------------------------------------------------------------
+			public interface BoardRepository extends JpaRepository<BoardEntity, Long> {
+			}
+			
+		2) post.db 패키지에 PostEntity 클래스, PostRepository 인터페이스 생성.
+			
+			@Getter
+			@Setter
+			@NoArgsConstructor
+			@AllArgsConstructor
+			@ToString
+			@Builder
+			@Entity(name = "post")
+			public class PostEntity {
+
+				@Id
+				@GeneratedValue(strategy = GenerationType.IDENTITY)
+				private Long id;
+
+				private Long boardId;
+
+				private String userName;
+
+				private String password;
+
+				private String email;
+
+				private String status;
+
+				private String title;
+				
+				@Column(columnDefinition = "TEXT")
+				private String content;
+
+				private LocalDateTime postedAt;
+			}
+			
+			----------------------------------------------------------------------------------
+			public interface PostRepository extends JpaRepository<PostEntity, Long> {
+			}
+
+		3) reply.db 패키지에 ReplyEntity 클래스, ReplyRepository 인터페이스 생성.
+		
+			@Getter
+			@Setter
+			@NoArgsConstructor
+			@AllArgsConstructor
+			@ToString
+			@Builder
+			@Entity(name = "reply")
+			public class ReplyEntity {
+
+				@Id
+				@GeneratedValue(strategy = GenerationType.IDENTITY)
+				private Long id;
+
+				private Long postId;
+
+				private String userName;
+
+				private String password;
+
+				private String status;
+
+				private String title;
+				
+				@Column(columnDefinition = "TEXT")
+				private String content;
+
+				private LocalDateTime repliedAt;
+			}
+			
+			----------------------------------------------------------------------------------
+			public interface ReplyRepository extends JpaRepository<ReplyEntity, Long> {
+			}
+			
+		4) SimpleBoardApplication 실행해서 정상작동 확인!!
+	
+	
+	(2) 컨트롤러, 모델, 서비스 관련 작성
+		- board, post, reply 패키지 하위에 각각 controller, model, service 패키지 작성.
+		
+		1) board.controller, board.model, board.service 에 BoardApiController, BoardRequest, BoardService 작성.
+		
+			----------------------------------------------------------------------------------
+			
+			@Getter
+			@Setter
+			@ToString
+			@Builder
+			@NoArgsConstructor
+			@AllArgsConstructor
+			@JsonNaming(value = PropertyNamingStrategies.SnakeCaseStrategy.class)
+			public class BoardRequest {
+				
+				@NotBlank
+				private String boardName;
+			}
+
+			----------------------------------------------------------------------------------
+			
+			@Service
+			@RequiredArgsConstructor
+			public class BoardService {
+
+				private final BoardRepository boardRepository;
+
+				public BoardEntity create(
+						BoardRequest boardRequest
+				){
+					var entity = BoardEntity.builder()
+							.boardName(boardRequest.getBoardName())
+							.status("REGISTERED")
+							.build();
+
+					return boardRepository.save(entity);
+				}
+			}
+			
+			----------------------------------------------------------------------------------
+
+			@RestController
+			@RequestMapping("/api/board")
+			@RequiredArgsConstructor
+			public class BoardApiController {
+
+				private final BoardService boardService;
+
+				@PostMapping("")
+				public BoardEntity create(
+					@Valid
+					@RequestBody BoardRequest boardRequest
+				){
+					return boardService.create(boardRequest);
+				}
+			}
+
+			----------------------------------------------------------------------------------
+
+		2) post.controller, post.model, post.service 에 PostApiController, PostRequest, PostService 작성.
+			
+			----------------------------------------------------------------------------------
+			
+			@Getter
+			@Setter
+			@ToString
+			@NoArgsConstructor
+			@AllArgsConstructor
+			@Builder
+			@JsonNaming(value = PropertyNamingStrategies.SnakeCaseStrategy.class)
+			public class PostRequest {
+
+				@NotBlank
+				private String userName;
+
+				@NotBlank
+				@Size(min = 4, max = 4)
+				private String password;
+
+				@NotBlank
+				@Email
+				private String email;
+
+				@NotBlank
+				private String title;
+
+				@NotBlank
+				private String content;
+			}
+			
+			----------------------------------------------------------------------------------
+			
+			@Service
+			@RequiredArgsConstructor
+			public class PostService {
+
+				private final PostRepository postRepository;
+
+				public PostEntity create(
+						PostRequest postRequest
+				){
+					var entity = PostEntity.builder()
+							.boardId(1L) // 임시 고정
+							.userName(postRequest.getUserName())
+							.password(postRequest.getPassword())
+							.email(postRequest.getEmail())
+							.status("REGISTERED")
+							.title(postRequest.getTitle())
+							.content(postRequest.getContent())
+							.postedAt(LocalDateTime.now())
+							.build();
+
+					return postRepository.save(entity);
+				}
+			}
+			
+			----------------------------------------------------------------------------------
+			
+			@RestController
+			@RequestMapping("/api/post")
+			@RequiredArgsConstructor
+			public class PostApiController {
+
+				private final PostService postService;
+				
+				@PostMapping("")
+				public PostEntity create(
+					   @Valid
+					   @RequestBody PostRequest postRequest
+				){
+					return postService.create(postRequest);
+				}
+			}
+			
+			----------------------------------------------------------------------------------
+			
+	(3) 게시판 생성 및 게시글 작성 테스트(TAT)
+		1) 게시판 생성(POST)
+			- http://localhost:8080/api/board
+			{
+			  "board_name" : "QNA 게시판"
+			}
+
+		2) 게시글 작성(POST)
+			- http://localhost:8080/api/post
+			{
+				"user_name" : "홍길동",
+				"password" : "1111",
+				"email" : "hong@gmail.com",
+				"title" : "문의드립니다.",
+				"content" : "물건을 구매했는데, 배송이 오지 않습니다."
+			}
+			
+	(4) 조회 코드 작성
+		
+		1) post.model 패키지에 PostViewRequest 클래스 추가
+			- PostApiController에 view()로 게시글을 보려고 할때 비번을 입력받으므로
+			  @PostMapping이 필요하며 그래서 추가로 PostViewRequest를 생성.
+			
+			@Getter
+			@Setter
+			@ToString
+			@NoArgsConstructor
+			@AllArgsConstructor
+			@Builder
+			@JsonNaming(value = PropertyNamingStrategies.SnakeCaseStrategy.class)
+			public class PostViewRequest {
+
+				@NotNull
+				private Long postId;
+
+				@NotBlank
+				private String password;
+			}
+		
+		2) PostApiController 추가
+		
+			@PostMapping("/view")
+			public PostEntity view(
+				@Valid
+				@RequestBody PostViewRequest postViewRequest
+			){
+				return postService.view(postViewRequest); // alt+enter로 PostService에 메소드 자동생성
+			}
+
+			@GetMapping("/all")
+			public List<PostEntity> list(
+
+			){
+				return postService.all();
+			}
+
+			@PostMapping("/delete")
+			public void delete(
+				@Valid
+				@RequestBody PostViewRequest postViewRequest
+			){
+				postService.delete(postViewRequest);
+			}
+			
+		3) PostService 추가
+			/*
+			체크사항
+			1. 게시글이 있는가?
+			2. 비밀번호가 맞는가?
+			* */
+			public PostEntity view(PostViewRequest postViewRequest) {
+
+				return postRepository.findById(postViewRequest.getPostId())
+					.map(it -> {
+						// entity 존재
+						if(!it.getPassword().equals(postViewRequest.getPassword())){
+							var format = "패스워드가 맞지 않습니다 %s vs %s";
+							throw new RuntimeException(String.format(format, it.getPassword(), postViewRequest.getPassword()));
+						}
+						return it;
+
+					}).orElseThrow(
+							() -> {
+								return new RuntimeException("해당 게시글이 존재하지 않습니다 : " + postViewRequest.getPostId());
+							});
+			}
+			
+			public List<PostEntity> all() {
+				return postRepository.findAll();
+			}
+
+			public void delete(PostViewRequest postViewRequest) {
+				postRepository.findById(postViewRequest.getPostId())
+					.map(it -> {
+						// entity 존재
+						if(!it.getPassword().equals(postViewRequest.getPassword())){
+							var format = "패스워드가 맞지 않습니다 %s vs %s";
+							throw new RuntimeException(String.format(format, it.getPassword(), postViewRequest.getPassword()));
+						}
+
+						it.setStatus("UNREGISTERED");
+						postRepository.save(it);
+						return it;
+
+					}).orElseThrow(
+							() -> {
+								return new RuntimeException("해당 게시글이 존재하지 않습니다 : " + postViewRequest.getPostId());
+							});
+			}
+			
+		4) TAT 에서 테스트.
+			- 전체 게시글(GET) : http://localhost:8080/api/post/all
+			- 게시글 열람(POST) : http://localhost:8080/api/post/view
+				{
+					"post_id" : "1",
+					"password" : "1111"
+				}
+				
+				-> password를 1122로 입력하고 인텔리제이 콘솔 확인.
+				   "java.lang.RuntimeException: 패스워드가 맞지 않습니다 1111 vs 1122"
+				-> id를 2로 입력하고 인텔리제이 콘솔 확인.
+				   "java.lang.RuntimeException: 해당 게시글이 존재하지 않습니다 : 2"
+			- 게시글 삭제(POST) : http://localhost:8080/api/post/delete
+				{
+					"post_id" : "1",
+					"password" : "1122"
+				}
+
+				-> 비번이 틀리므로 콘솔에서 에러 메세지 확인.
+				   "java.lang.RuntimeException: 패스워드가 맞지 않습니다 1111 vs 1122"
+				-> 비번을 "1111"로 설정하고 Send하면 삭제.
+					(실제 삭제는 되지않고 status만 "UNREGISTERED"로 변경)
+					
+	(5) delete시 실제 데이터 삭제되도록 코드 수정.
+		
+		1) PostRepository 수정
+		
+			public interface PostRepository extends JpaRepository<PostEntity, Long> {
+
+				// select * from post where id = ? and status = ? order by id desc limit 1
+				Optional<PostEntity> findFirstByIdAndStatusOrderByIdDesc(Long id, String status);
+			}
+		
+		2) PostService 수정
+		
+			public PostEntity view(PostViewRequest postViewRequest) {
+				
+				// 등록된 것만 보여지도록 수정
+				return postRepository.findFirstByIdAndStatusOrderByIdDesc(postViewRequest.getPostId(), "REGISTERED")
+					.map(it -> {
+						// entity 존재
+						if(!it.getPassword().equals(postViewRequest.getPassword())){
+							var format = "패스워드가 맞지 않습니다 %s vs %s";
+							throw new RuntimeException(String.format(format, it.getPassword(), postViewRequest.getPassword()));
+						}
+						return it;
+
+					}).orElseThrow(
+							() -> {
+								return new RuntimeException("해당 게시글이 존재하지 않습니다 : " + postViewRequest.getPostId());
+							});
+			}
+		
+		3) TAT에서 조회해보면..
+			-> "java.lang.RuntimeException: 해당 게시글이 존재하지 않습니다 : 1" 콘솔 에러 확인.
+			-> 삭제된 글은 조회 안됨(정상)
+
+
+
+
+
+
+
+
+
+
+
+----------------------------------------------------------------------------------------------------------
+
+
+
+

@@ -1,0 +1,104 @@
+※ Tips
+	- 에러시 alt + Enter로 에러 수정.
+
+
+1. RestController VS Controller
+	(1) @RestController
+		- 응답값이 JSON으로 내려가겠다는 선언
+	(2)	@Controller
+		- html 응답을 하겠다는 선언
+		- 안에 메소드에 @ResponseBody 어노테이션 붙여줘야 함.(응답을 JSON으로 내리기 위해서)
+ 
+2. GetMapping VS RequestMapping
+	(1) GetMapping("/api")
+		- /api 로 들어오는 url을 get방식으로 받겠다
+		
+	(2) RequestMapping(path = "/api", method = RequestMethod.GET)
+		- /api 로 들어오는 url을 get방식으로 받겠다
+		- RequestMapping(path = "/api")
+			-> get, put, post 방식 모두 다 동작함.
+			
+3. test폴더에 RestApiApplicationTests
+
+	(1) 직렬화
+		- DTO를 JSON으로 바꾸는 것
+		
+	(2) DTO 파일에서
+		1) @JsonIgnore
+			- JSON을 사용하지 않겠다는 어노테이션
+			
+			ex)
+			@JsonIgnore
+			public String getUser(){
+				return userName;
+			}
+		
+		2) @JsonProperty
+			- 다른 형태의 문자열로 받고싶을 때 사용
+			- 기본 형태의 VO 방식으로 사용하다가 특별한 형태의 출력을 주고싶을 때 사용.
+			{"EMAIL" : "hong@gmail.com"}
+			
+			ex)
+			@JsonProperty("EMAIL")
+			private String email;
+			
+			
+4. 예외 처리(exception 프로젝트)
+	(1) 일반적 예외
+		- RestApiController
+		
+	(2) RestControllerAdvice를 통한 예외 처리(글로벌) -> ★★★
+		- RestApiExceptionHandler
+		
+	(3) RestApiExceptionHandler
+		1) 특정 패키지 내의 컨트롤러만 지정
+			@Slf4j
+			@RestControllerAdvice(basePackages = "com.example.exception.controller")
+			public class RestApiExceptionHandler { ... }
+			
+		2) 특정 컨트롤러만 지정 가능
+			@Slf4j
+			@RestControllerAdvice(basePackageClasses = {RestApiController.class, RestApiBController.class})
+			public class RestApiExceptionHandler { ... }
+			
+			
+5. Spring Boot Validation
+	※ 참조
+		- https://jakarta.ee/specifications/bean-validation/3.0/jakarta-bean-validation-spec-3.0.html
+		- 핸드폰 정규식
+			^\\d{2,3}-\\d{3,4}-\\d{4}\$
+	
+	(1) 어노테이션
+		- @Size					문자 길이 측정(int type 불가)
+		- @NotNull				null 불가
+		- @NotEmpty				null / "" 불가
+		- @NotBlank				null / "" / " " 불가
+		- @Pattern				정규식 적용
+		- @Max					최대값
+		- @Min					최소값
+		- @AsserTrue / False	별도 Logic 적용
+		- @Valid				해당 object validation 실행
+		- @Past					과거 날짜
+		- @PastOrPresent		오늘이거나 과거 날짜
+		- @Future				미래 날짜
+		- @FutureOrPresent		오늘이거나 미래 날짜
+		
+	(2) Talend API tester
+		{
+		  "result_code" : "",
+		  "result_message" : "",
+		  "data" : {
+			"name" : "홍길동",
+			"nick_name" : "",
+			"age" : 20,
+			"password" : "1111",
+			"email" : "hong@gmail.com",
+			"phone_number" : "010-1111-2222",
+			"register_at" : "2024-02-09T18:10:30",
+			"birth_day_year_month" : "2024-01"
+		  },
+		  "error" : {
+			"error_message" : [
+			]
+		  }
+		}
