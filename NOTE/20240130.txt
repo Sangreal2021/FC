@@ -1,0 +1,361 @@
+[Ch.08 실전 프로젝트 7: 비동기 주문 개발]
+
+
+
+----------------------------------------------------------------------------------------------------------------------
+1. 비동기 처리(async)
+	- 동기 처리 : 한 번의 요청이 들어오면 거기에 대한 응답을 받을 때까지 작업이 유지
+
+	(1) 
+
+
+2. 비동기를 위한 Message Queue
+
+	(1) Rabbit MQ
+		- RabbitMQ는 오픈소스 메세지 브로커 SW
+		
+		1) 메시지 브로커는 송신자와 수신자 간의 효율적인 메시지 전달을 중개하는 역할을 담당.
+		
+		2) RabbitMQ는 AMQP(Advanced Messasge Queuing Protocol)를 기반으로 작동하며, 대규모 분산 시스템에서
+			사용되는 메시지 큐 서비스를 제공함.
+			
+		3) RabbitMQ는 프로듀서(메시지를 생성하는 어플리케이션)와 컨슈머(메시지를 소비하는 어플리케이션)간의
+			비동기적인 통신을 용이하게 함.
+			
+		4) 프로듀서는 메시지를 RabbitMQ에 보내고, RabbitMQ는 이를 큐에 저장함. 그런 다음 컨슈머는 큐에서
+			메시지를 가져와 처리할 수 있음.
+
+
+3. Docker에 RabbitMq 설정하기
+
+	(1) 인텔리제이에서 최상위(service) 우클릭 -> 디렉토리 생성(rabbitmq) -> docker-compose.yaml 생성
+	
+		version: '3.7'
+		services:
+		  rabbitmq:
+			image: rabbitmq:latest
+			ports:
+			  - "5672:5672" # rabbit amqp 기본 port
+			  - "15672:15672" # manage port
+			environment:
+			  - RABBITMQ_DEFAULT_USER=admin     # 기본사용자 이름
+			  - RABBITMQ_DEFAULT_PASS=admin123! # 기본사용자 비밀번호
+			  
+	(2) 터미널 실행(alt+F12) 후 rabbitmq 디렉토리로 이동
+		1) cd rabbitmq
+		
+		2) 백그라운드 실행
+			docker compose up -d
+
+		3) Docker Desktop에서 확인 가능!
+		
+	(3) Docker Desktop에서 rabbitmq 우측 점세개 클릭 후 터미널에서 실행
+		1) ls 로 루트 위치 확인
+		
+		2) 실행
+			rabbitmq-plugins enable rabbitmq_management
+			
+		3) 브라우저에서 확인
+			- localhost:15672 로 들어가면 관리자 로그인 화면 출력
+			- admin / admin123! 로 접속
+
+
+4. Producer 개발하기 - 1
+	- API 서버
+
+	(1) build.gradle(:api) rabbitmq 관련 디펜던시 추가 후 새로고침
+	
+		dependencies {
+			compileOnly 'org.projectlombok:lombok'
+			annotationProcessor 'org.projectlombok:lombok'
+
+			// rabbitmq
+			implementation 'org.springframework.boot:spring-boot-starter-amqp'
+
+			implementation 'org.springframework.boot:spring-boot-starter-web'
+			testImplementation 'org.springframework.boot:spring-boot-starter-test'
+
+			implementation project(':db')
+			implementation project(':common')
+
+			// jpa
+			implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+
+			implementation group: 'org.springdoc', name: 'springdoc-openapi-ui', version: '1.7.0'
+
+			// jwt
+			implementation group: 'io.jsonwebtoken', name: 'jjwt-api', version: '0.11.5'
+			runtimeOnly group: 'io.jsonwebtoken', name: 'jjwt-impl', version: '0.11.5'
+			runtimeOnly group: 'io.jsonwebtoken', name: 'jjwt-jackson', version: '0.11.5'
+		}
+
+	(2) api.config.rabbitmq 패키지 생성 후 RabbitMQConfig 클래스 생성
+	
+		import com.fasterxml.jackson.databind.ObjectMapper;
+		import org.springframework.amqp.core.Binding;
+		import org.springframework.amqp.core.BindingBuilder;
+		import org.springframework.amqp.core.DirectExchange;
+		import org.springframework.amqp.core.Queue;
+		import org.springframework.amqp.rabbit.connection.ConnectionFactory;
+		import org.springframework.amqp.rabbit.core.RabbitTemplate;
+		import org.springframework.amqp.support.converter.Jackson2JsonMessageConverter;
+		import org.springframework.amqp.support.converter.MessageConverter;
+		import org.springframework.context.annotation.Bean;
+		import org.springframework.context.annotation.Configuration;
+
+		@Configuration
+		public class RabbitMQConfig {
+			
+			// 1. Queue 에 대한 설정
+
+			// Exchange 생성
+			@Bean
+			public DirectExchange directExchange() {
+				return new DirectExchange("delivery.exchange");
+			}
+			
+			// Queue 생성
+			@Bean
+			public Queue queue() {
+				return new Queue("delivery_queue");
+			}
+			
+			// Binding 설정
+			@Bean
+			public Binding binding(DirectExchange directExchange, Queue queue) {
+				return BindingBuilder.bind(queue).to(directExchange).with("delivery.key");
+			}
+			
+			
+			// 2. 기타 설정
+			
+			// org.springframework.amqp.rabbit.connection.ConnectionFactory,
+			// org.springframework.amqp.support.converter.MessageConverter
+			// ConnectionFactory 는 application.yaml 의 설정을 따라 RabbitTemplate 에서
+			//  자동으로 채워서 넘겨줌
+			@Bean
+			public RabbitTemplate rabbitTemplate(
+				ConnectionFactory connectionFactory,
+				MessageConverter messageConverter
+			) {
+				var rabbitTemplate = new RabbitTemplate(connectionFactory);
+				rabbitTemplate.setMessageConverter(messageConverter);
+				
+				return rabbitTemplate;
+			}
+			
+			@Bean
+			public MessageConverter messageConverter(ObjectMapper objectMapper) {
+				return new Jackson2JsonMessageConverter(objectMapper);
+			}
+		}
+		
+	(3) api프로젝트의 application.yaml 추가
+	
+		spring:
+		  rabbitmq:
+			host: localhost
+			port: 5672
+			username: admin
+			password: admin123!
+
+		  jpa:
+			show-sql: true
+			properties:
+			  format_sql: true
+			  dialect: org.hibernate.dialect.MySQL8Dialect
+			hibernate:
+			  ddl-auto: validate
+		  datasource:
+			url: jdbc:mysql://localhost:3306/delivery?useSSL=false&useUnicode=true&allowPublicKeyRetrieval=true
+			driver-class-name: com.mysql.cj.jdbc.Driver
+			username: root
+			password: admin123!
+
+		token:
+		  secret:
+			key: SpringBootJWTHelperTokenSecretKeyValue123!@#
+		  access-token:
+			plus-hour: 1
+		  refresh-token:
+			plus-hour: 12
+
+	(4) api.common.rabbitmq 패키지 생성 후 Producer 클래스 생성
+	
+		@RequiredArgsConstructor
+		@Component
+		public class Producer {
+			
+			private final RabbitTemplate rabbitTemplate;
+			
+			public void producer(String exchange, String routeKey, Object object) {
+				rabbitTemplate.convertAndSend(exchange, routeKey, object);
+			}
+		}
+		
+	(5) 간단히 테스트 - api.config.health 에 HealthOpenApiController 클래스 생성
+	
+		@RequiredArgsConstructor
+		@Slf4j
+		@RestController
+		@RequestMapping("/open-api")
+		public class HealthOpenApiController {
+			
+			private final Producer producer;
+
+			@GetMapping("/health")
+			public void health() {
+				log.info("health call");
+				producer.producer("delivery.exchange", "delivery.key", "hello");
+			}
+		}
+		
+	-> 어플 실행시키고 localhost:8080/swagger-ui/index.html 로 접속
+	-> RabbitMQ Management 사이트(localhost:15672) 로 들어가서 Connections, Exchanges에서 확인
+
+
+5. Producer 개발하기 - 2
+
+	- api.config.health 에 HealthOpenApiController 수정
+	
+		@RequiredArgsConstructor
+		@Slf4j
+		@RestController
+		@RequestMapping("/open-api")
+		public class HealthOpenApiController {
+			
+			@GetMapping("/health")
+			public void health() {
+				log.info("health call");
+			}
+		}
+
+	(1) common 모듈 추가
+		1) 최상단 service 에 우클릭 후 새 모듈 common 생성
+		
+		2) 최상단 src 디렉토리 삭제
+		
+		3) build.gradle(:common) 작성
+
+			plugins {
+				id 'java'
+			}
+
+			group 'org.delivery'
+			version '1.0-SNAPSHOT'
+			sourceCompatibility = '11'
+
+			configurations {
+				compileOnly {
+					extendsFrom annotationProcessor
+				}
+			}
+
+			repositories {
+				mavenCentral()
+			}
+
+			dependencies {
+				compileOnly 'org.projectlombok:lombok:1.18.26'
+				annotationProcessor 'org.projectlombok:lombok:1.18.26'
+
+				testImplementation 'org.junit.jupiter:junit-jupiter-api:5.8.1'
+				testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.8.1'
+			}
+
+			test {
+				useJUnitPlatform()
+			}
+
+			jar {
+				enabled = true
+			}
+
+	(2) common 모듈에 java 하위에 org.delivery.common 패키지 생성
+		
+		1) common.message.model 패키지 생성
+		
+		2) 패키지명 너무 길어지면 우클릭으로 package-info 파일 생성 후 common 까지 이동시킴
+		
+		3) common.message.model 에 UserOrderMessage 클래스 생성
+		
+			@Data
+			@NoArgsConstructor
+			@AllArgsConstructor
+			@Builder
+			public class UserOrderMessage {
+				
+				private Long userOrderId;
+			}
+
+	(3) build.gradle(:api) 추가 후 새로고침
+	
+		dependencies {
+			compileOnly 'org.projectlombok:lombok'
+			annotationProcessor 'org.projectlombok:lombok'
+
+			// rabbitmq
+			implementation 'org.springframework.boot:spring-boot-starter-amqp'
+
+			implementation 'org.springframework.boot:spring-boot-starter-web'
+			testImplementation 'org.springframework.boot:spring-boot-starter-test'
+
+			implementation project(':db')
+			implementation project(':common')
+
+	(4) api.domain.userorder.producer 에 UserOrderProducer 클래스 생성
+	
+		@Service
+		@RequiredArgsConstructor
+		public class UserOrderProducer {
+			
+			private final Producer producer;
+			
+			private static final String EXCHANGE = "delivery.exchange";
+			private static final String ROUTE_KEY = "delivery.key";
+			
+			public void sendOrder(UserOrderEntity userOrderEntity) {
+				sendOrder(userOrderEntity.getId());
+			}
+			
+			public void sendOrder(Long userOrderId) {
+				var message = UserOrderMessage.builder()
+					.userOrderId(userOrderId)
+					.build();
+				
+				producer.producer(EXCHANGE, ROUTE_KEY, message);
+			}
+		}
+		
+	(5) api.domain.userorder.business 에 UserOrderBusiness 추가
+	
+		@RequiredArgsConstructor
+		@Business
+		public class UserOrderBusiness {
+			
+			private final UserOrderProducer userOrderProducer;
+			
+			...
+			
+				// 주문내역 기록 남기기
+				userOrderMenuEntityList.forEach(it ->{
+					userOrderMenuService.order(it);
+				});
+				
+				// 비동기로 가맹점에 주문 알리기
+				userOrderProducer.sendOrder(newUserOrderEntity);
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+----------------------------------------------------------------------------------------------------------------------

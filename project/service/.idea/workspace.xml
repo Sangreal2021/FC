@@ -4,7 +4,22 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="91da66bb-37ed-4c63-bfdf-a8cb9281c7df" name="변경" comment="" />
+    <list default="true" id="91da66bb-37ed-4c63-bfdf-a8cb9281c7df" name="변경" comment="">
+      <change afterPath="$PROJECT_DIR$/api/src/main/java/org/delivery/api/common/rabbitmq/Producer.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/api/src/main/java/org/delivery/api/config/health/HealthOpenApiController.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/api/src/main/java/org/delivery/api/config/rabbitmq/RabbitMQConfig.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/api/src/main/java/org/delivery/api/domain/userorder/producer/UserOrderProducer.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/common/src/main/java/org/delivery/common/message/model/UserOrderMessage.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/common/src/main/java/org/delivery/common/package-info.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/rabbitmq/docker-compose.yaml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/api/build.gradle" beforeDir="false" afterPath="$PROJECT_DIR$/api/build.gradle" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/api/src/main/java/org/delivery/api/common/api/Api.java" beforeDir="false" afterPath="$PROJECT_DIR$/api/src/main/java/org/delivery/api/common/api/Api.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/api/src/main/java/org/delivery/api/common/api/Result.java" beforeDir="false" afterPath="$PROJECT_DIR$/api/src/main/java/org/delivery/api/common/api/Result.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/api/src/main/java/org/delivery/api/domain/userorder/business/UserOrderBusiness.java" beforeDir="false" afterPath="$PROJECT_DIR$/api/src/main/java/org/delivery/api/domain/userorder/business/UserOrderBusiness.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/api/src/main/resources/application.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/api/src/main/resources/application.yaml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/common/build.gradle" beforeDir="false" afterPath="$PROJECT_DIR$/common/build.gradle" afterDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -31,6 +46,24 @@
                 <item name="" type="6a2764b6:ExternalProjectsStructure$RootNode" />
                 <item name="service" type="f1a62948:ProjectNode" />
               </path>
+              <path>
+                <item name="" type="6a2764b6:ExternalProjectsStructure$RootNode" />
+                <item name="service" type="f1a62948:ProjectNode" />
+                <item name="api" type="2d1252cf:ModuleNode" />
+              </path>
+              <path>
+                <item name="" type="6a2764b6:ExternalProjectsStructure$RootNode" />
+                <item name="service" type="f1a62948:ProjectNode" />
+                <item name="api" type="2d1252cf:ModuleNode" />
+                <item name="Dependencies" type="6de06a37:ExternalSystemViewDefaultContributor$MyDependenciesNode" />
+              </path>
+              <path>
+                <item name="" type="6a2764b6:ExternalProjectsStructure$RootNode" />
+                <item name="service" type="f1a62948:ProjectNode" />
+                <item name="api" type="2d1252cf:ModuleNode" />
+                <item name="Dependencies" type="6de06a37:ExternalSystemViewDefaultContributor$MyDependenciesNode" />
+                <item name="compileClasspath" type="62daadca:ExternalSystemViewDefaultContributor$DependencyScopeExternalSystemNode" />
+              </path>
             </expand>
             <select />
           </tree_state>
@@ -42,8 +75,9 @@
     <option name="RECENT_TEMPLATES">
       <list>
         <option value="Interface" />
-        <option value="Class" />
         <option value="HTML File" />
+        <option value="package-info" />
+        <option value="Class" />
       </list>
     </option>
   </component>
@@ -83,8 +117,11 @@
       <recent name="D:\private\study\FC\BE\workspace\web\project\service\db\src\main\java\org\delivery\db" />
       <recent name="D:\private\study\FC\BE\workspace\web\project\service\api\src\main\java\org\delivery\api" />
     </key>
+    <key name="MoveClassesOrPackagesDialog.RECENTS_KEY">
+      <recent name="org.delivery.common" />
+    </key>
   </component>
-  <component name="RunManager" selected="애플리케이션.StoreAdminApplication">
+  <component name="RunManager" selected="애플리케이션.ApiApplication">
     <configuration name="ApiApplication" type="Application" factoryName="Application" temporary="true" nameIsGenerated="true">
       <option name="MAIN_CLASS_NAME" value="org.delivery.api.ApiApplication" />
       <module name="service.api.main" />
