@@ -1,7 +1,6 @@
 package org.delivery.storeadmin.domain.user.service;
 
 import lombok.RequiredArgsConstructor;
-import org.apache.catalina.Store;
 import org.delivery.db.storeuser.StoreUserEntity;
 import org.delivery.db.storeuser.StoreUserRepository;
 import org.delivery.db.storeuser.enums.StoreUserStatus;
@@ -14,10 +13,10 @@ import java.util.Optional;
 @RequiredArgsConstructor
 @Service
 public class StoreUserService {
-
+    
     private final StoreUserRepository storeUserRepository;
     private final PasswordEncoder passwordEncoder;
-
+    
     public StoreUserEntity register(
         StoreUserEntity storeUserEntity
     ){
@@ -26,7 +25,7 @@ public class StoreUserService {
         storeUserEntity.setRegisteredAt(LocalDateTime.now());
         return storeUserRepository.save(storeUserEntity);
     }
-
+    
     public Optional<StoreUserEntity> getRegisterUser(String email){
         return storeUserRepository.findFirstByEmailAndStatusOrderByIdDesc(email, StoreUserStatus.REGISTERED);
     }

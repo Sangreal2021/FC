@@ -1,0 +1,4 @@
+
+Alt + ` : 터미널
+Ctrl + \ : 메뉴 열기
+Shift + Shift : 전체 파일 찾기

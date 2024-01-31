@@ -7,9 +7,6 @@ import lombok.NoArgsConstructor;
 import org.delivery.db.storeuser.enums.StoreUserRole;
 import org.delivery.db.storeuser.enums.StoreUserStatus;
 
-import javax.persistence.Column;
-import javax.persistence.EnumType;
-import javax.persistence.Enumerated;
 import java.time.LocalDateTime;
 
 @Data

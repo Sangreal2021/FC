@@ -2,8 +2,6 @@ package org.delivery.storeadmin.domain.user.converter;
 
 import lombok.RequiredArgsConstructor;
 import org.delivery.db.store.StoreEntity;
-import org.delivery.db.store.StoreRepository;
-import org.delivery.db.store.enums.StoreStatus;
 import org.delivery.db.storeuser.StoreUserEntity;
 import org.delivery.storeadmin.domain.authorization.model.UserSession;
 import org.delivery.storeadmin.domain.user.controller.model.StoreUserRegisterRequest;
@@ -25,7 +23,7 @@ public class StoreUserConverter {
             .storeId(storeEntity.getId()) // TODO NULL 일때 에러 체크 확인 필요
             .build();
     }
-
+    
     public StoreUserResponse toResponse(
         StoreUserEntity storeUserEntity,
         StoreEntity storeEntity
@@ -50,7 +48,7 @@ public class StoreUserConverter {
             )
             .build();
     }
-
+    
     public StoreUserResponse toResponse(UserSession userSession){
         return StoreUserResponse.builder()
             .user(

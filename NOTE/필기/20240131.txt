@@ -1,0 +1,971 @@
+[Ch.08 실전 프로젝트 7: 비동기 주문 개발]
+
+※ 오류
+	(1) delivery.queue를 delivery_queue로 작성하여 RabbitMQ에서 deiivery_queue로 인식되어 매칭이 안됬을 경우
+		- Docker Desktop에서 RabbitMQ 삭제 후 인텔리제이에서 docker compose up -d로 다시 설치.
+		- Docker Desktop에서 rabbitMQ 터미널 열고 rabbitmq-plugins enable rabbitmq_management 명령어로 실행.
+
+----------------------------------------------------------------------------------------------------------------------
+6. Consumer 개발하기
+
+	(1) store-admin 의 build.gradle 추가 후 새로고침
+	
+		implementation project(':db')
+		implementation project(':common')
+
+	(2) api 프로젝트에서 config에 objectmapper 폴더를 통째로 store-admin의 config 폴더에 붙여넣기
+	
+	(3) store-admin의 application.yaml 추가
+	
+		server:
+		  port: 8081
+
+		spring:
+		  application:
+			name: store-admin
+		  
+		  rabbitmq:
+			host: localhost
+			port: 5672
+			username: admin
+			password: admin123!
+		  
+		  jpa:
+			show-sql: true
+			properties:
+			  format_sql: true
+			  dialect: org.hibernate.dialect.MySQL8Dialect
+			hibernate:
+			  ddl-auto: validate
+		  datasource:
+			url: jdbc:mysql://localhost:3306/delivery?useSSL=false&useUnicode=true&allowPublicKeyRetrieval=true
+			driver-class-name: com.mysql.cj.jdbc.Driver
+			username: root
+			password: admin123!
+
+	(4) build.gradle(:store-admin) 추가 후 새로고침
+	
+		// rabbitmq
+		implementation 'org.springframework.boot:spring-boot-starter-amqp'
+		
+		implementation 'org.springframework.boot:spring-boot-starter-web'
+		testImplementation 'org.springframework.boot:spring-boot-starter-test'
+
+		implementation project(':db')
+		implementation project(':common')
+
+	(5) storeadmin.config.rabbitmq 패키지 생성 후 RabbitMQConfig 클래스 생성
+	
+		// application.yaml 에 있는 RabbitMQ를 가지고 ConnectionFactory 생성됨
+		// 그리고 objectMapper 로 잭슨2 라이브러리가 동작함
+
+		@Configuration
+		public class RabbitMQConfig {
+			
+			@Bean
+			public MessageConverter messageConverter(ObjectMapper objectMapper) {
+				return new Jackson2JsonMessageConverter(objectMapper);
+			}
+		}
+
+	(6) storeadmin.domain.userorder.consumer 에 UserOrderConsumer 클래스 생성
+	
+		// 사용자가 주문한 거 받아오기
+	
+		@Component
+		@RequiredArgsConstructor
+		@Slf4j
+		public class UserOrderConsumer {
+			
+			@RabbitListener(queues = "delivery.queue")
+			public void userOrderConsumer(
+				UserOrderMessage userOrderMessage
+			) {
+				log.info("message queue >> {}", userOrderMessage);
+			}
+		}
+		
+	(7) build.gradle(:common) 수정
+	
+		plugins {
+			id 'java'
+		}
+
+		group 'org.delivery'
+		version '1.0-SNAPSHOT'
+		sourceCompatibility = '11'
+
+		configurations {
+			compileOnly {
+				extendsFrom annotationProcessor
+			}
+		}
+
+		repositories {
+			mavenCentral()
+		}
+
+		dependencies {
+			compileOnly 'org.projectlombok:lombok:1.18.26'
+			annotationProcessor 'org.projectlombok:lombok:1.18.26'
+
+		//    testImplementation 'org.junit.jupiter:junit-jupiter-api:5.8.1'
+		//    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.8.1'
+		}
+
+		test {
+			useJUnitPlatform()
+		}
+
+		jar {
+			enabled = true
+		}
+
+	(8) store-admin 모듈(8081) 과 api 모듈(8080) 둘다 실행
+	
+		1) 스웨거8080 실행해서 로그인 및 modheader에 키 넣기.
+		
+		2) order 에서 주문 실행
+			{
+			  "result": {
+				"result_code": 0,
+				"result_message": "string",
+				"result_description": "string"
+			  },
+			  "body": {
+				"store_menu_id_list": [
+				  1
+				]
+			  }
+			}
+			
+		3) 인텔리제이 store 콘솔에서 message queue를 통해 들어온 userIrderId 확인 가능!
+		
+		4) order 에서 하나 더 주문 실행
+
+			{
+			  "result": {
+				"result_code": 0,
+				"result_message": "string",
+				"result_description": "string"
+			  },
+			  "body": {
+				"store_menu_id_list": [
+				  2
+				]
+			  }
+			}
+			
+		5) 인텔리제이 store 콘솔에서 message queue를 통해 새로 들어온 userIrderId 확인 가능!
+		
+		6) order에서 주문 3개 더 클릭
+
+
+7. SSE Server Sent Events란(서버 -> 클라이언트)
+	- SSE(EventSource)란 단방향 통신을 통해 서버에서 클라이언트로 실시간 이벤트를 전송하는 웹 기술.
+		이를 통해 서버 측에서 이벤트를 생성하고, 클라이언트는 이벤트를 실시간으로 수신할 수 있음.
+		
+	- 여기서 Server는 가맹점Server, 클라이언트는 가맹점 파트너
+	
+	(1) 일반적인 퀩 소켓과 비교하면, SSE는 단방향 통신만을 지원하며, 추가적인 설정 없이도 웹 브라우저에서
+		내장된 기능으로 지원됨.(클라이언트 -> 서버 는 불가능)
+	(2) SSE는 서버에서 클라이언트로만 데이터를 전송하는 단방향 통신. 클라이언트는 서버로부터 이벤트를
+		수신하며, 서버로부터의 요청은 지원하지 않음.
+	(3) SSE는 텍스트 기반 형식으로 데이터를 전송. 이벤트는 data, event, id, retry와 같은 필드로 구성된
+		텍스트 형태로 클라이언트로 전송됨.
+	(4) SSE는 기존의 HTTP 연결을 재사용하여 데이터를 전송함. 따라서 별도의 특별한 프로토콜이나 서버
+		구성이 필요하지 않음.
+
+
+8. SSE를 통한 사용자 주문 Push 알림 개발하기 - 1
+
+	(1) store-admin 모듈에서 main.html thymeleaf 부분 주석처리
+	
+	(2) storeadmin.domain.sse.controller 패키지 생성 후 SseApiController 생성
+	
+		@Slf4j
+		@RequiredArgsConstructor
+		@RestController
+		@RequestMapping("/api/sse")
+		public class SseApiController {
+			
+			@GetMapping(path = "/connect", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+			public ResponseBodyEmitter connect(
+				@Parameter(hidden = true)
+				@AuthenticationPrincipal UserSession userSession
+			){
+				log.info("login user {}", userSession);
+				
+				var emitter = new SseEmitter();
+				
+				emitter.onTimeout(()->{
+					// 클라이언트와 타임아웃이 일어났을 때
+					emitter.complete();
+				});
+				
+				emitter.onCompletion(()->{
+					// 클라이언트와 연결이 종료됬을때 하는 작업
+					
+				});
+				
+				// 최초 연결시 응답 전송
+				var event = SseEmitter
+					.event()
+					.name("onopen");
+				
+				try {
+					emitter.send(event);
+				} catch (IOException e) {
+					emitter.completeWithError(e);
+				}
+				
+				return emitter;
+			}
+		}
+		
+	(3) store-admin의 resources.templates에 main.html 수정
+	
+		<!DOCTYPE html>
+		<html lang="kor" xmlns:th="http://www.thymeleaf.org">
+		<head>
+			<meta charset="UTF-8">
+			<title>Title</title>
+		</head>
+		<body>
+			<h1>MAIN PAGE</h1>
+
+		<!--    <h1 th:text="${#authentication.name}"></h1> </br>
+			<h1 th:text="${#authentication.principal.storeName}"></h1> </br>
+			<h1 th:text="${#authentication.principal.role}"></h1> </br>
+
+			<h1 th:text="${#authentication}"></h1> </br>-->
+
+
+		</body>
+
+		<script>
+			const url = "http://localhost:8081/api/sse/connect";    // 접속주소
+			const eventSource = new EventSource(url);               // sse 연결
+
+			eventSource.onopen = event => {
+				console.log("sse connection");
+				console.log(event);
+			}
+
+			eventSource.onmessage = event => {
+				console.log("receive data : " + event.data);
+			}
+
+		</script>
+		</html>
+		
+		-> localhost:8081 에서 master@gmail.com / 1234 치고 들어가서 개발자 도구 띄워서 확인!
+		
+	(4) storeadmin.domain.sse.controller 패키지 생성 후 SseApiController 수정
+	
+		@Slf4j
+		@RequiredArgsConstructor
+		@RestController
+		@RequestMapping("/api/sse")
+		public class SseApiController {
+			
+			// 요청이 들어올 때마다 새로운 스레드에서 받음
+			// 1. 즉, userConnection 에다가 emitter 를 저장
+			// 2. 새로운 요청들어오면 userConnection 에서 꺼내서 발송
+			// 3. 넣은 스레드, 꺼낸 스레드, 발송 스레드가 다르기 때문에
+			//      스레드 세이프한 자료구조인 ConcurrentHashMap 을 사용
+			private static final Map<String, SseEmitter> userConnection = new ConcurrentHashMap<>();
+			
+			@GetMapping(path = "/connect", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+			public ResponseBodyEmitter connect(
+				@Parameter(hidden = true)
+				@AuthenticationPrincipal UserSession userSession    // 인증된 사용자
+			){
+				log.info("login user {}", userSession);
+				
+				var emitter = new SseEmitter(); // ms 단위로 리커넥션 설정 가능
+				userConnection.put(userSession.getUserId().toString(), emitter);
+				
+				emitter.onTimeout(()->{
+					log.info("on timeout");
+					// 클라이언트와 타임아웃이 일어났을 때
+					emitter.complete();
+				});
+				
+				emitter.onCompletion(()->{
+					log.info("on completion");
+					// 클라이언트와 연결이 종료됬을때 하는 작업
+					userConnection.remove(userSession.getUserId().toString()); // 해당 커넥션 사용자 아이디 삭제
+				});
+				
+				// 최초 연결시 응답 전송
+				var event = SseEmitter
+					.event()
+					.name("onopen");
+				
+				try {
+					emitter.send(event);
+				} catch (IOException e) {
+					emitter.completeWithError(e);
+				}
+				
+				return emitter;
+			}
+			
+			@GetMapping("/push-event")
+			public void pushEvent(
+				@Parameter(hidden = true)
+				@AuthenticationPrincipal UserSession userSession
+			){
+				// 기존에 연결된 유저 찾기
+				var emitter = userConnection.get(userSession.getUserId().toString());
+				
+				var event = SseEmitter
+					.event()
+					.data("hello"); // 자동으로 onmessage 에 전달
+				
+				try {
+					emitter.send(event);
+				} catch (IOException e) {
+					emitter.completeWithError(e);
+				}
+			}
+		}
+		
+	(5) 테스트
+		
+		1) 어플 실행
+		
+		2) localhost:8081 에서 로그인 해서 개발자 도구 확인
+			- 30초 마다 리커넥션 하는 것 확인!!(dafault)
+
+		3) 리커넥션 시간 설정 가능
+			log.info("login user {}", userSession);
+			
+			var emitter = new SseEmitter(1000L * 60); // ms 단위로 리커넥션 설정 가능
+			userConnection.put(userSession.getUserId().toString(), emitter);
+			
+			emitter.onTimeout(()->{
+				log.info("on timeout");
+				// 클라이언트와 타임아웃이 일어났을 때
+				emitter.complete();
+			});
+			
+		4) 8081에서 로그인 후 스웨거8081로 push-event 실행하면 8081 main에 콘솔에서 메세지 확인 가능
+
+
+9. SSE를 통한 사용자 주문 Push 알림 개발하기 - 2
+
+	(1) storeadmin.domain.sse.connection.model 패키지 생성 후 UserSseConnection 클래스 생성
+	
+		@Data
+		public class UserSseConnection {
+			
+			private String uniqueKey;
+			private SseEmitter sseEmitter;
+			
+			private UserSseConnection(
+				String uniqueKey
+			){
+				// key 초기화
+				this.uniqueKey = uniqueKey;
+				// sse 초기화
+				this.sseEmitter = new SseEmitter(1000L * 60);
+				
+				// on completion 처리
+				this.sseEmitter.onCompletion(()->{
+					// connection pool 에서 remove 해줘야 함
+				});
+				
+				// on timeout 처리
+				this.sseEmitter.onTimeout(()->{
+					this.sseEmitter.complete();
+				});
+				
+				// onopen 메세지
+				this.sendMessage("onopen", "connect");
+			}
+			
+			public static UserSseConnection connect(
+				String uniqueKey
+			) {
+				return new UserSseConnection(uniqueKey);
+			}
+			
+			public void sendMessage(String eventName, Object data) {
+				
+				var event = SseEmitter.event()
+					.name(eventName)
+					.data(data);
+				
+				try {
+					this.sseEmitter.send(event);
+				} catch (IOException e) {
+					this.sseEmitter.completeWithError(e);
+				}
+			}
+		}
+		
+		----------------------------------------------------------------------------------
+		<SseApiController> var temp 추가
+		
+        log.info("login user {}", userSession);
+        
+        var emitter = new SseEmitter(1000L * 60); // ms 단위로 리커넥션 설정 가능
+        userConnection.put(userSession.getUserId().toString(), emitter);
+        
+        var temp = UserSseConnection.connect(userSession.getStoreId().toString());
+        
+        emitter.onTimeout(()->{
+            log.info("on timeout");
+            // 클라이언트와 타임아웃이 일어났을 때
+            emitter.complete();
+        });
+		
+		
+	(2) storeadmin.domain.sse.connection.ifs 패키지 생성 후 ConnectionPoolIfs 인터페이스 생성
+	
+		public interface ConnectionPoolIfs<T, R> {
+			
+			void addSession(T uniqueKey, R session);
+			
+			R getSession(T uniqueKey);
+			
+			void onCompletionCallBack(R session);
+		}
+		
+	(3) storeadmin.domain.sse.connection 에 SseConnectionPool 클래스 생성
+
+		@Slf4j
+		@Component
+		public class SseConnectionPool implements ConnectionPoolIfs<String, UserSseConnection> {
+			
+			private static final Map<String, UserSseConnection> connectionPool = new ConcurrentHashMap<>();
+			
+			@Override
+			public void addSession(String uniqueKey, UserSseConnection userSseConnection) {
+				connectionPool.put(uniqueKey, userSseConnection);
+			}
+			
+			@Override
+			public UserSseConnection getSession(String uniqueKey) {
+				return connectionPool.get(uniqueKey);
+			}
+			
+			@Override
+			public void onCompletionCallBack(UserSseConnection session) {
+				log.info("CallBack Connection Pool Completion : {}", session);
+				connectionPool.remove(session.getUniqueKey());
+			}
+		}
+		
+	(4) storeadmin.domain.sse.connection.model 에 UserSseConnection 수정
+	
+		@Getter
+		@ToString
+		@EqualsAndHashCode
+		public class UserSseConnection {
+			
+			private final String uniqueKey;
+			private final SseEmitter sseEmitter;
+			private final ConnectionPoolIfs<String, UserSseConnection> connectionPoolIfs;
+			private final ObjectMapper objectMapper;
+			
+			private UserSseConnection(
+				String uniqueKey,
+				ConnectionPoolIfs<String, UserSseConnection> connectionPoolIfs,
+				ObjectMapper objectMapper
+			){
+				// key 초기화
+				this.uniqueKey = uniqueKey;
+				// sse 초기화
+				this.sseEmitter = new SseEmitter(1000L * 60);
+				// callback 초기화
+				this.connectionPoolIfs = connectionPoolIfs;
+				
+				// object mapper 초기화
+				this.objectMapper = objectMapper;
+				
+				// on completion 처리
+				this.sseEmitter.onCompletion(()->{
+					// connection pool 에서 remove 해줘야 함
+					this.connectionPoolIfs.onCompletionCallBack(this);
+				});
+				
+				// on timeout 처리
+				this.sseEmitter.onTimeout(()->{
+					this.sseEmitter.complete();
+				});
+				
+				// onopen 메세지
+				this.sendMessage("onopen", "connect");
+			}
+			
+			public static UserSseConnection connect(
+				String uniqueKey,
+				ConnectionPoolIfs<String, UserSseConnection> connectionPoolIfs,
+				ObjectMapper objectMapper
+			) {
+				return new UserSseConnection(uniqueKey, connectionPoolIfs, objectMapper);
+			}
+			
+			public void sendMessage(String eventName, Object data) {
+				try {
+					var json = this.objectMapper.writeValueAsString(data);
+					var event = SseEmitter.event()
+						.name(eventName)
+						.data(json);
+					
+					this.sseEmitter.send(event);
+				} catch (IOException e) {
+					this.sseEmitter.completeWithError(e);
+				}
+			}
+			
+			public void sendMessage(Object data) {
+				try {
+					var json = this.objectMapper.writeValueAsString(data);
+					var event = SseEmitter.event()
+						.data(json);
+					
+					this.sseEmitter.send(event);
+				} catch (IOException e) {
+					this.sseEmitter.completeWithError(e);
+				}
+			}
+		}
+		
+	(5) storeadmin.domain.sse.controller 에 SseApiController 수정
+	
+		@Slf4j
+		@RequiredArgsConstructor
+		@RestController
+		@RequestMapping("/api/sse")
+		public class SseApiController {
+			
+			private final SseConnectionPool sseConnectionPool;
+			private final ObjectMapper objectMapper;
+			
+			@GetMapping(path = "/connect", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+			public ResponseBodyEmitter connect(
+				@Parameter(hidden = true)
+				@AuthenticationPrincipal UserSession userSession    // 인증된 사용자
+			){
+				log.info("login user {}", userSession);
+				
+				var userSseConnection = UserSseConnection.connect(
+					userSession.getStoreId().toString(),
+					sseConnectionPool,
+					objectMapper
+				);
+				// session 에 추가
+				sseConnectionPool.addSession(userSseConnection.getUniqueKey(), userSseConnection);
+				
+				return userSseConnection.getSseEmitter();
+			}
+			
+			@GetMapping("/push-event")
+			public void pushEvent(
+				@Parameter(hidden = true)
+				@AuthenticationPrincipal UserSession userSession
+			){
+				var userSseConnection = sseConnectionPool.getSession(userSession.getStoreId().toString());
+				Optional.ofNullable(userSseConnection)
+					.ifPresent(it->{
+						it.sendMessage("hello world");
+					});
+			}
+		}
+
+	(6) 테스트
+		
+		1) 8081 에서 로그인 -> 스웨거8081 에서 push-event 실행
+			-> 결과 확인(스웨거, 8081 콘솔, 인텔리제이 콘솔)
+
+
+10. SSE를 통한 사용자 주문 Push 알림 개발하기 - 3
+
+	(1) ERD 에서 1:n 관계 설정
+		- store : user_order = 1 : n
+		
+	(2) DBeaver 에서 수정
+	
+		1) user_order 테이블 truncate.
+		
+		2) store_id 컬럼 생성(Not Null) 후 user_id 컬럼 아래로 이동
+		
+	(3) 인텔리제이 코드 수정
+
+		1) db.userorder 에 UserOrderEntity 수정
+			- storeId 추가
+		
+			public class UserOrderEntity extends BaseEntity {
+
+				@Column(nullable = false)
+				private Long userId;    // user table 1:n
+				
+				@Column(nullable = false)
+				private Long storeId;
+
+		2) api.domain.userorder.controller.model 에 UserOrderRequest 수정
+		
+			@Data
+			@NoArgsConstructor
+			@AllArgsConstructor
+			public class UserOrderRequest {
+				
+				@NotNull
+				private Long storeId;
+				
+				// 주문
+				// 특정 사용자가 , 특정 메뉴를 주문
+				// 특정 사용자 = 로그인된 세션에 들어있는 사용자
+				// 특정 메뉴 id
+				@NotNull
+				private List<Long> storeMenuIdList;
+			}
+			
+		3) api.domain.userorder.business 에 UserOrderBusiness 수정
+			- toEntity()에 body.getStoreId() 추가
+
+			public UserOrderResponse userOrder(User user, UserOrderRequest body) {
+				var storeMenuEntityList = body.getStoreMenuIdList()
+					.stream()
+					.map(it -> storeMenuService.getStoreMenuWithThrow(it))
+					.collect(Collectors.toList());
+
+				var userOrderEntity = userOrderConverter.toEntity(user, body.getStoreId(), storeMenuEntityList);
+
+				// 주문
+				var newUserOrderEntity = userOrderService.order(userOrderEntity);
+
+				// 맵핑
+				
+		4) api.domain.userorder.converter 에 UserOrderConverter 수정
+			- toEntity()에 Long storeId 인자 추가
+			- .storeId(storeId) 추가
+
+			@Converter
+			public class UserOrderConverter {
+
+				public UserOrderEntity toEntity(
+					User user,
+					Long storeId,
+					List<StoreMenuEntity> storeMenuEntityList
+				){
+					var totalAmount = storeMenuEntityList.stream()
+						.map(it -> it.getAmount())
+						.reduce(BigDecimal.ZERO, BigDecimal::add);
+
+					return UserOrderEntity.builder()
+						.userId(user.getId())
+						.storeId(storeId)
+						.amount(totalAmount)
+						.build();
+				}
+				
+	(4) 테스트
+	
+		1) 스웨거8080 으로 접속해서 로그인(steve@gmail.com / 1234) 후 토큰값 modheader에 입력 후 me 에서 확인!
+		
+		2) user-order 에서 메뉴 주문
+			- 1번 가게에서 2번 메뉴 주문
+
+			{
+			  "result": {
+				"result_code": 0,
+				"result_message": "string",
+				"result_description": "string"
+			  },
+			  "body": {
+				"store_id": 1,
+				"store_menu_id_list": [
+				  2
+				]
+			  }
+			}
+			
+		3) DB에서 확인
+			select * from user_order;
+			
+	(5) 요청을 받은 쪽(store-admin)에서의 처리
+		
+		1) storeadmin.domain.userorder.service 패키지 생성 후 UserOrderService 클래스 생성
+		
+			@Service
+			@RequiredArgsConstructor
+			public class UserOrderService {
+				
+				private final UserOrderRepository userOrderRepository;
+				
+				// 주문 내역 꺼내오기
+				public Optional<UserOrderEntity> getUserOrder(Long id) {
+					return userOrderRepository.findById(id);
+				}
+			}
+		
+		2) storeadmin.domain.userorder.controller.model 에 UserOrderResponse 클래스 생성
+		
+			@Data
+			@NoArgsConstructor
+			@AllArgsConstructor
+			@Builder
+			public class UserOrderResponse {
+				
+				private Long id;
+				
+				private Long storeId;
+				
+				private Long userId;
+				
+				private UserOrderStatus status;
+				
+				private BigDecimal amount;
+				
+				private LocalDateTime orderedAt;
+				
+				private LocalDateTime acceptedAt;
+				
+				private LocalDateTime cookingStartedAt;
+				
+				private LocalDateTime deliveryStartedAt;
+				
+				private LocalDateTime receivedAt;
+			}
+			
+		3) storeadmin.domain.userorder.converter 에 UserOrderConverter 클래스 생성
+		
+			@Service
+			public class UserOrderConverter {
+				
+				public UserOrderResponse toResponse(UserOrderEntity userOrderEntity) {
+					return UserOrderResponse.builder()
+						.id(userOrderEntity.getId())
+						.userId(userOrderEntity.getUserId())
+						.storeId(userOrderEntity.getStoreId())
+						.status(userOrderEntity.getStatus())
+						.amount(userOrderEntity.getAmount())
+						.orderedAt(userOrderEntity.getOrderedAt())
+						.acceptedAt(userOrderEntity.getAcceptedAt())
+						.cookingStartedAt(userOrderEntity.getCookingStartedAt())
+						.deliveryStartedAt(userOrderEntity.getDeliveryStartedAt())
+						.receivedAt(userOrderEntity.getReceivedAt())
+						.build();
+				}
+			}
+		
+		4) storeadmin.domain.userorder.business 에 UserOrderBusiness 클래스 생성
+		
+			@Service
+			@RequiredArgsConstructor
+			public class UserOrderBusiness {
+				
+				private final UserOrderService userOrderService;
+				private final SseConnectionPool sseConnectionPool;
+				
+				/*
+				* 1. 주문
+				* 2. 주문 내역 찾기
+				* 3. 스토어 찾기
+				* 4. 연결된 세션 찾아서
+				* 5. push
+				**/
+				public void pushUserOrder(UserOrderMessage userOrderMessage) {
+					var userOrderEntity = userOrderService.getUserOrder(userOrderMessage.getUserOrderId())
+						.orElseThrow(() -> new RuntimeException("사용자 주문내역 없음"));
+					
+					// 현재 연결된 사용자 즉, 가게와 연결이 되어있는 커넥션을 찾아옴
+					var userConnection = sseConnectionPool.getSession(userOrderEntity.getStoreId().toString());
+					
+					// 주문 메뉴, 가격, 상태
+					
+					// 사용자에게 push
+					userConnection.sendMessage();
+				}
+			}
+			
+		5) storeadmin.domain.storemenu 패키지 생성 후 그 하위에 controller, converter, service 패키지 생성
+		
+		6) storeadmin.domain.storemenu.service 에 StoreMenuService 클래스 생성
+		
+			@Service
+			@RequiredArgsConstructor
+			public class StoreMenuService {
+				
+				private final StoreMenuRepository storeMenuRepository;
+				
+				public StoreMenuEntity getStoreMenuWithThrow(Long id) {
+					return storeMenuRepository.findFirstByIdAndStatusOrderByIdDesc(id, StoreMenuStatus.REGISTERED)
+						.orElseThrow(() -> new RuntimeException("Store Menu Not Found"));
+				}
+			}
+			
+		7) storeadmin.domain.storemenu.controller.model 에 StoreMenuResponse 클래스 생성
+		
+			@Data
+			@NoArgsConstructor
+			@AllArgsConstructor
+			@Builder
+			public class StoreMenuResponse {
+				
+				private Long id;
+				
+				private String name;
+				
+				private BigDecimal amount;
+				
+				private StoreMenuStatus status;
+				
+				private String thumbnailUrl;
+				
+				private int likeCount;
+				
+				private int sequence;
+			}
+			
+		8) storeadmin.domain.storemenu.converter 에 StoreMenuConverter 클래스 생성
+		
+			@Service
+			public class StoreMenuConverter {
+				
+				public StoreMenuResponse toResponse(StoreMenuEntity storeMenuEntity) {
+					return StoreMenuResponse.builder()
+						.id(storeMenuEntity.getId())
+						.name(storeMenuEntity.getName())
+						.status(storeMenuEntity.getStatus())
+						.amount(storeMenuEntity.getAmount())
+						.thumbnailUrl(storeMenuEntity.getThumbnailUrl())
+						.likeCount(storeMenuEntity.getLikeCount())
+						.sequence(storeMenuEntity.getSequence())
+						.build();
+				}
+				
+				public List<StoreMenuResponse> toResponse(List<StoreMenuEntity> list) {
+					return list.stream()
+						.map(it -> {
+							return toResponse(it);
+						}).collect(Collectors.toList());
+				}
+			}
+			
+		9) storeadmin.domain.userordermenu 패키지 생성 후 controller, converter, service 패키지 생성
+		
+		10) storeadmin.domain.userordermenu.service 에 UserOrderMenuService 클래스 생성
+		
+			@Service
+			@RequiredArgsConstructor
+			public class UserOrderMenuService {
+				
+				private final UserOrderMenuRepository userOrderMenuRepository;
+				
+				public List<UserOrderMenuEntity> getUserOrderMenuList(Long userOrderId) {
+					return userOrderMenuRepository.findAllByUserOrderIdAndStatus(userOrderId, UserOrderMenuStatus.REGISTERED);
+				}
+			}
+			
+		11) storeadmin.domain.userorder.controller.model 에 UserOrderDetailResponse 클래스 생성
+		
+			@Data
+			@NoArgsConstructor
+			@AllArgsConstructor
+			@Builder
+			public class UserOrderDetailResponse {
+				
+				private UserOrderResponse userOrderResponse;
+				private List<StoreMenuResponse> storeMenuResponses;
+			}
+			
+		12) storeadmin.domain.userorder.business 에 UserOrderBusiness 추가
+		
+			@Service
+			@RequiredArgsConstructor
+			public class UserOrderBusiness {
+				
+				private final UserOrderService userOrderService;
+				private final UserOrderConverter userOrderConverter;
+				private final SseConnectionPool sseConnectionPool;
+				private final UserOrderMenuService userOrderMenuService;
+				private final StoreMenuService storeMenuService;
+				private final StoreMenuConverter storeMenuConverter;
+				
+				/*
+				* 1. 주문
+				* 2. 주문 내역 찾기
+				* 3. 스토어 찾기
+				* 4. 연결된 세션 찾아서
+				* 5. push
+				**/
+				public void pushUserOrder(UserOrderMessage userOrderMessage) {
+					var userOrderEntity = userOrderService.getUserOrder(userOrderMessage.getUserOrderId())
+						.orElseThrow(() -> new RuntimeException("사용자 주문내역 없음"));
+					
+					// user order menu
+					var userOrderMenuList = userOrderMenuService.getUserOrderMenuList(userOrderEntity.getId());
+					
+					// user order menu -> store menu
+					var storeMenuResponseList = userOrderMenuList.stream()
+						.map(userOrderMenuEntity -> {
+							return storeMenuService.getStoreMenuWithThrow(userOrderMenuEntity.getStoreMenuId());
+						})
+						.map(storeMenuEntity -> {
+							return storeMenuConverter.toResponse(storeMenuEntity);
+						})
+						.collect(Collectors.toList());
+					
+					var userOrderResponse = userOrderConverter.toResponse(userOrderEntity);
+					
+					// 어떠한 메뉴를 주문했는지 response 에 담음
+					var push = UserOrderDetailResponse.builder()
+						.userOrderResponse(userOrderResponse)
+						.storeMenuResponsesList(storeMenuResponseList)
+						.build();
+					
+					// 위의 response 를 push 로 전송
+					
+					// 현재 연결된 사용자 즉, 가게와 연결이 되어있는 커넥션을 찾아옴
+					var userConnection = sseConnectionPool.getSession(userOrderEntity.getStoreId().toString());
+					
+					// 사용자에게 push
+					userConnection.sendMessage(push);
+				}
+			}
+			
+		13) storeadmin.domain.userorder.consumer 에 UserOrderConsumer 수정
+		
+			@Component
+			@RequiredArgsConstructor
+			@Slf4j
+			public class UserOrderConsumer {
+				
+				private final UserOrderBusiness userOrderBusiness;
+				
+				@RabbitListener(queues = "delivery.queue")
+				public void userOrderConsumer(
+					UserOrderMessage userOrderMessage
+				){
+					log.info("message queue >> {}", userOrderMessage);
+					userOrderBusiness.pushUserOrder(userOrderMessage);
+				}
+			}
+			
+		14) 테스트
+			- store-admin 부터 실행, api 실행
+			- 
+		
+		
+
+		
+
+
+
+
+
+
+
+
+
+
+
+
+
+----------------------------------------------------------------------------------------------------------------------

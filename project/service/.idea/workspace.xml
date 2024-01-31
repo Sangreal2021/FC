@@ -5,20 +5,53 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="91da66bb-37ed-4c63-bfdf-a8cb9281c7df" name="변경" comment="">
-      <change afterPath="$PROJECT_DIR$/api/src/main/java/org/delivery/api/common/rabbitmq/Producer.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/api/src/main/java/org/delivery/api/config/health/HealthOpenApiController.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/api/src/main/java/org/delivery/api/config/rabbitmq/RabbitMQConfig.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/api/src/main/java/org/delivery/api/domain/userorder/producer/UserOrderProducer.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/common/src/main/java/org/delivery/common/message/model/UserOrderMessage.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/common/src/main/java/org/delivery/common/package-info.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/rabbitmq/docker-compose.yaml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/store-admin/src/main/java/org/delivery/storeadmin/config/objectmapper/ObjectMapperConfig.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/store-admin/src/main/java/org/delivery/storeadmin/config/rabbitmq/RabbitMqConfig.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/store-admin/src/main/java/org/delivery/storeadmin/domain/sse/connection/SseConnectionPool.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/store-admin/src/main/java/org/delivery/storeadmin/domain/sse/connection/ifs/ConnectionPoolIfs.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/store-admin/src/main/java/org/delivery/storeadmin/domain/sse/connection/model/UserSseConnection.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/store-admin/src/main/java/org/delivery/storeadmin/domain/sse/controller/SseApiController.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/store-admin/src/main/java/org/delivery/storeadmin/domain/storemenu/controller/model/StoreMenuResponse.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/store-admin/src/main/java/org/delivery/storeadmin/domain/storemenu/converter/StoreMenuConverter.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/store-admin/src/main/java/org/delivery/storeadmin/domain/storemenu/service/StoreMenuService.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/store-admin/src/main/java/org/delivery/storeadmin/domain/userorder/business/UserOrderBusiness.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/store-admin/src/main/java/org/delivery/storeadmin/domain/userorder/consumer/UserOrderConsumer.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/store-admin/src/main/java/org/delivery/storeadmin/domain/userorder/controller/model/UserOrderDetailResponse.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/store-admin/src/main/java/org/delivery/storeadmin/domain/userorder/controller/model/UserOrderResponse.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/store-admin/src/main/java/org/delivery/storeadmin/domain/userorder/converter/UserOrderConverter.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/store-admin/src/main/java/org/delivery/storeadmin/domain/userorder/service/UserOrderService.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/store-admin/src/main/java/org/delivery/storeadmin/domain/userordermenu/service/UserOrderMenuService.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../NOTE/20240109.txt" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../NOTE/20240110.txt" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../NOTE/20240111.txt" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../NOTE/20240112.txt" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../NOTE/20240116.txt" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../NOTE/20240117.txt" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../NOTE/20240117_webService.txt" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../NOTE/20240119_delivery.txt" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../NOTE/20240122.txt" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../NOTE/20240123.txt" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../NOTE/20240124.txt" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../NOTE/20240129.txt" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../NOTE/20240130.txt" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../NOTE/query/delivery.mwb" beforeDir="false" afterPath="$PROJECT_DIR$/../../NOTE/query/delivery.mwb" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../NOTE/query/delivery.mwb.bak" beforeDir="false" afterPath="$PROJECT_DIR$/../../NOTE/query/delivery.mwb.bak" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/api/build.gradle" beforeDir="false" afterPath="$PROJECT_DIR$/api/build.gradle" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/api/src/main/java/org/delivery/api/common/api/Api.java" beforeDir="false" afterPath="$PROJECT_DIR$/api/src/main/java/org/delivery/api/common/api/Api.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/api/src/main/java/org/delivery/api/common/api/Result.java" beforeDir="false" afterPath="$PROJECT_DIR$/api/src/main/java/org/delivery/api/common/api/Result.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/api/src/main/java/org/delivery/api/config/rabbitmq/RabbitMQConfig.java" beforeDir="false" afterPath="$PROJECT_DIR$/api/src/main/java/org/delivery/api/config/rabbitmq/RabbitMqConfig.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/api/src/main/java/org/delivery/api/domain/userorder/business/UserOrderBusiness.java" beforeDir="false" afterPath="$PROJECT_DIR$/api/src/main/java/org/delivery/api/domain/userorder/business/UserOrderBusiness.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/api/src/main/resources/application.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/api/src/main/resources/application.yaml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/api/src/main/java/org/delivery/api/domain/userorder/controller/model/UserOrderRequest.java" beforeDir="false" afterPath="$PROJECT_DIR$/api/src/main/java/org/delivery/api/domain/userorder/controller/model/UserOrderRequest.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/api/src/main/java/org/delivery/api/domain/userorder/converter/UserOrderConverter.java" beforeDir="false" afterPath="$PROJECT_DIR$/api/src/main/java/org/delivery/api/domain/userorder/converter/UserOrderConverter.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/common/build.gradle" beforeDir="false" afterPath="$PROJECT_DIR$/common/build.gradle" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/db/src/main/java/org/delivery/db/userorder/UserOrderEntity.java" beforeDir="false" afterPath="$PROJECT_DIR$/db/src/main/java/org/delivery/db/userorder/UserOrderEntity.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/rabbitmq/docker-compose.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/rabbitmq/docker-compose.yaml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/store-admin/build.gradle" beforeDir="false" afterPath="$PROJECT_DIR$/store-admin/build.gradle" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/store-admin/src/main/java/org/delivery/storeadmin/domain/user/business/StoreUserBusiness.java" beforeDir="false" afterPath="$PROJECT_DIR$/store-admin/src/main/java/org/delivery/storeadmin/domain/user/business/StoreUserBusiness.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/store-admin/src/main/java/org/delivery/storeadmin/domain/user/controller/model/StoreUserResponse.java" beforeDir="false" afterPath="$PROJECT_DIR$/store-admin/src/main/java/org/delivery/storeadmin/domain/user/controller/model/StoreUserResponse.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/store-admin/src/main/java/org/delivery/storeadmin/domain/user/converter/StoreUserConverter.java" beforeDir="false" afterPath="$PROJECT_DIR$/store-admin/src/main/java/org/delivery/storeadmin/domain/user/converter/StoreUserConverter.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/store-admin/src/main/java/org/delivery/storeadmin/domain/user/service/StoreUserService.java" beforeDir="false" afterPath="$PROJECT_DIR$/store-admin/src/main/java/org/delivery/storeadmin/domain/user/service/StoreUserService.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/store-admin/src/main/java/org/delivery/storeadmin/presentation/PageController.java" beforeDir="false" afterPath="$PROJECT_DIR$/store-admin/src/main/java/org/delivery/storeadmin/presentation/PageController.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/store-admin/src/main/resources/application.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/store-admin/src/main/resources/application.yaml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/store-admin/src/main/resources/templates/main.html" beforeDir="false" afterPath="$PROJECT_DIR$/store-admin/src/main/resources/templates/main.html" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -74,9 +107,9 @@
   <component name="FileTemplateManagerImpl">
     <option name="RECENT_TEMPLATES">
       <list>
-        <option value="Interface" />
         <option value="HTML File" />
         <option value="package-info" />
+        <option value="Interface" />
         <option value="Class" />
       </list>
     </option>
@@ -95,29 +128,35 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent"><![CDATA[{
-  "keyToString": {
-    "ASKED_ADD_EXTERNAL_FILES": "true",
-    "DefaultHtmlFileTemplate": "HTML File",
-    "Gradle.service [clean].executor": "Run",
-    "Gradle.service:api [:api:ApiApplication.main()].executor": "Run",
-    "Gradle.service:store-admin [:store-admin:StoreAdminApplication.main()].executor": "Run",
-    "RunOnceActivity.OpenProjectViewOnStart": "true",
-    "RunOnceActivity.ShowReadmeOnStart": "true",
-    "git-widget-placeholder": "main",
-    "jdk.selected.JAVA_MODULE": "corretto-11",
-    "kotlin-language-version-configured": "true",
-    "last_opened_file_path": "D:/private/study/FC/BE/workspace/web/project/service/store-admin/src/main/java",
-    "settings.editor.selected.configurable": "preferences.keymap"
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;ASKED_ADD_EXTERNAL_FILES&quot;: &quot;true&quot;,
+    &quot;DefaultHtmlFileTemplate&quot;: &quot;HTML File&quot;,
+    &quot;Gradle.'service.store-admin'에 있는 테스트.executor&quot;: &quot;Run&quot;,
+    &quot;Gradle.service [clean].executor&quot;: &quot;Run&quot;,
+    &quot;Gradle.service:api [:api:ApiApplication.main()].executor&quot;: &quot;Run&quot;,
+    &quot;Gradle.service:store-admin [:store-admin:StoreAdminApplication.main()].executor&quot;: &quot;Run&quot;,
+    &quot;RunOnceActivity.OpenProjectViewOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;main&quot;,
+    &quot;jdk.selected.JAVA_MODULE&quot;: &quot;corretto-11&quot;,
+    &quot;kotlin-language-version-configured&quot;: &quot;true&quot;,
+    &quot;last_opened_file_path&quot;: &quot;D:/private/study/FC/BE/workspace/web/project/service/store-admin/src/main/java/org/delivery/storeadmin/config&quot;,
+    &quot;project.structure.last.edited&quot;: &quot;모듈&quot;,
+    &quot;project.structure.proportion&quot;: &quot;0.0&quot;,
+    &quot;project.structure.side.proportion&quot;: &quot;0.0&quot;,
+    &quot;settings.editor.selected.configurable&quot;: &quot;preferences.keymap&quot;
   }
-}]]></component>
+}</component>
   <component name="RecentsManager">
     <key name="CopyFile.RECENT_KEYS">
+      <recent name="D:\private\study\FC\BE\workspace\web\project\service\store-admin\src\main\java\org\delivery\storeadmin\config" />
       <recent name="D:\private\study\FC\BE\workspace\web\project\service\store-admin\src\main\java" />
       <recent name="D:\private\study\FC\BE\workspace\web\project\service\db\src\main\java\org\delivery\db" />
       <recent name="D:\private\study\FC\BE\workspace\web\project\service\api\src\main\java\org\delivery\api" />
     </key>
     <key name="MoveClassesOrPackagesDialog.RECENTS_KEY">
+      <recent name="org.delivery.storeadmin.domain.sse.connection" />
       <recent name="org.delivery.common" />
     </key>
   </component>
@@ -148,6 +187,28 @@
         <option name="Make" enabled="true" />
       </method>
     </configuration>
+    <configuration name="'service.store-admin'에 있는 테스트" type="GradleRunConfiguration" factoryName="Gradle" temporary="true">
+      <ExternalSystemSettings>
+        <option name="executionName" />
+        <option name="externalProjectPath" value="$PROJECT_DIR$" />
+        <option name="externalSystemIdString" value="GRADLE" />
+        <option name="scriptParameters" value="" />
+        <option name="taskDescriptions">
+          <list />
+        </option>
+        <option name="taskNames">
+          <list>
+            <option value=":store-admin:test" />
+          </list>
+        </option>
+        <option name="vmOptions" />
+      </ExternalSystemSettings>
+      <ExternalSystemDebugServerProcess>false</ExternalSystemDebugServerProcess>
+      <ExternalSystemReattachDebugProcess>true</ExternalSystemReattachDebugProcess>
+      <DebugAllEnabled>false</DebugAllEnabled>
+      <RunAsTest>true</RunAsTest>
+      <method v="2" />
+    </configuration>
     <configuration name="service [clean]" type="GradleRunConfiguration" factoryName="Gradle" temporary="true">
       <ExternalSystemSettings>
         <option name="executionName" />
@@ -172,6 +233,7 @@
     </configuration>
     <recent_temporary>
       <list>
+        <item itemvalue="Gradle.'service.store-admin'에 있는 테스트" />
         <item itemvalue="애플리케이션.StoreAdminApplication" />
         <item itemvalue="Gradle.service [clean]" />
         <item itemvalue="애플리케이션.ApiApplication" />

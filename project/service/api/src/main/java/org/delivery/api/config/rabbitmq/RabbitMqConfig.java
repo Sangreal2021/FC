@@ -13,7 +13,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 @Configuration
-public class RabbitMQConfig {
+public class RabbitMqConfig {
     
     // 1. Queue 에 대한 설정
 
@@ -26,7 +26,7 @@ public class RabbitMQConfig {
     // Queue 생성
     @Bean
     public Queue queue() {
-        return new Queue("delivery_queue");
+        return new Queue("delivery.queue");
     }
     
     // Binding 설정

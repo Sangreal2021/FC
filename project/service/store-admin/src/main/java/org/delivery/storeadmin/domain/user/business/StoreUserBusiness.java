@@ -23,13 +23,13 @@ public class StoreUserBusiness {
         StoreUserRegisterRequest request
     ){
         var storeEntity = storeRepository.findFirstByNameAndStatusOrderByIdDesc(request.getStoreName(), StoreStatus.REGISTERED);
-
+        
         var entity = storeUserConverter.toEntity(request, storeEntity.get());
-
+        
         var newEntity = storeUserService.register(entity);
-
+        
         var response = storeUserConverter.toResponse(newEntity, storeEntity.get());
-
+        
         return response;
     }
 }
