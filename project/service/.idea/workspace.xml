@@ -5,52 +5,17 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="91da66bb-37ed-4c63-bfdf-a8cb9281c7df" name="변경" comment="">
-      <change afterPath="$PROJECT_DIR$/store-admin/src/main/java/org/delivery/storeadmin/config/objectmapper/ObjectMapperConfig.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/store-admin/src/main/java/org/delivery/storeadmin/config/rabbitmq/RabbitMqConfig.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/store-admin/src/main/java/org/delivery/storeadmin/domain/sse/connection/SseConnectionPool.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/store-admin/src/main/java/org/delivery/storeadmin/domain/sse/connection/ifs/ConnectionPoolIfs.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/store-admin/src/main/java/org/delivery/storeadmin/domain/sse/connection/model/UserSseConnection.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/store-admin/src/main/java/org/delivery/storeadmin/domain/sse/controller/SseApiController.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/store-admin/src/main/java/org/delivery/storeadmin/domain/storemenu/controller/model/StoreMenuResponse.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/store-admin/src/main/java/org/delivery/storeadmin/domain/storemenu/converter/StoreMenuConverter.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/store-admin/src/main/java/org/delivery/storeadmin/domain/storemenu/service/StoreMenuService.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/store-admin/src/main/java/org/delivery/storeadmin/domain/userorder/business/UserOrderBusiness.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/store-admin/src/main/java/org/delivery/storeadmin/domain/userorder/consumer/UserOrderConsumer.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/store-admin/src/main/java/org/delivery/storeadmin/domain/userorder/controller/model/UserOrderDetailResponse.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/store-admin/src/main/java/org/delivery/storeadmin/domain/userorder/controller/model/UserOrderResponse.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/store-admin/src/main/java/org/delivery/storeadmin/domain/userorder/converter/UserOrderConverter.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/store-admin/src/main/java/org/delivery/storeadmin/domain/userorder/service/UserOrderService.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/store-admin/src/main/java/org/delivery/storeadmin/domain/userordermenu/service/UserOrderMenuService.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../../NOTE/20240109.txt" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/../../NOTE/20240110.txt" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/../../NOTE/20240111.txt" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/../../NOTE/20240112.txt" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/../../NOTE/20240116.txt" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/../../NOTE/20240117.txt" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/../../NOTE/20240117_webService.txt" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/../../NOTE/20240119_delivery.txt" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/../../NOTE/20240122.txt" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/../../NOTE/20240123.txt" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/../../NOTE/20240124.txt" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/../../NOTE/20240129.txt" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/../../NOTE/20240130.txt" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/../../NOTE/query/delivery.mwb" beforeDir="false" afterPath="$PROJECT_DIR$/../../NOTE/query/delivery.mwb" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../../NOTE/query/delivery.mwb.bak" beforeDir="false" afterPath="$PROJECT_DIR$/../../NOTE/query/delivery.mwb.bak" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../NOTE/git사용법.txt" beforeDir="false" afterPath="$PROJECT_DIR$/../../NOTE/git사용법.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../NOTE/필기/20240131.txt" beforeDir="false" afterPath="$PROJECT_DIR$/../../NOTE/필기/20240131.txt" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/api/src/main/java/org/delivery/api/config/rabbitmq/RabbitMQConfig.java" beforeDir="false" afterPath="$PROJECT_DIR$/api/src/main/java/org/delivery/api/config/rabbitmq/RabbitMqConfig.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/api/src/main/java/org/delivery/api/domain/userorder/business/UserOrderBusiness.java" beforeDir="false" afterPath="$PROJECT_DIR$/api/src/main/java/org/delivery/api/domain/userorder/business/UserOrderBusiness.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/api/src/main/java/org/delivery/api/domain/userorder/controller/model/UserOrderRequest.java" beforeDir="false" afterPath="$PROJECT_DIR$/api/src/main/java/org/delivery/api/domain/userorder/controller/model/UserOrderRequest.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/api/src/main/java/org/delivery/api/domain/userorder/converter/UserOrderConverter.java" beforeDir="false" afterPath="$PROJECT_DIR$/api/src/main/java/org/delivery/api/domain/userorder/converter/UserOrderConverter.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/common/build.gradle" beforeDir="false" afterPath="$PROJECT_DIR$/common/build.gradle" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/db/src/main/java/org/delivery/db/userorder/UserOrderEntity.java" beforeDir="false" afterPath="$PROJECT_DIR$/db/src/main/java/org/delivery/db/userorder/UserOrderEntity.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/rabbitmq/docker-compose.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/rabbitmq/docker-compose.yaml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/store-admin/build.gradle" beforeDir="false" afterPath="$PROJECT_DIR$/store-admin/build.gradle" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/store-admin/src/main/java/org/delivery/storeadmin/domain/user/business/StoreUserBusiness.java" beforeDir="false" afterPath="$PROJECT_DIR$/store-admin/src/main/java/org/delivery/storeadmin/domain/user/business/StoreUserBusiness.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/store-admin/src/main/java/org/delivery/storeadmin/domain/user/controller/model/StoreUserResponse.java" beforeDir="false" afterPath="$PROJECT_DIR$/store-admin/src/main/java/org/delivery/storeadmin/domain/user/controller/model/StoreUserResponse.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/store-admin/src/main/java/org/delivery/storeadmin/domain/user/converter/StoreUserConverter.java" beforeDir="false" afterPath="$PROJECT_DIR$/store-admin/src/main/java/org/delivery/storeadmin/domain/user/converter/StoreUserConverter.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/store-admin/src/main/java/org/delivery/storeadmin/domain/user/service/StoreUserService.java" beforeDir="false" afterPath="$PROJECT_DIR$/store-admin/src/main/java/org/delivery/storeadmin/domain/user/service/StoreUserService.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/store-admin/src/main/java/org/delivery/storeadmin/presentation/PageController.java" beforeDir="false" afterPath="$PROJECT_DIR$/store-admin/src/main/java/org/delivery/storeadmin/presentation/PageController.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/store-admin/src/main/resources/application.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/store-admin/src/main/resources/application.yaml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/store-admin/src/main/java/org/delivery/storeadmin/domain/authorization/AuthorizationService.java" beforeDir="false" afterPath="$PROJECT_DIR$/store-admin/src/main/java/org/delivery/storeadmin/domain/authorization/AuthorizationService.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/store-admin/src/main/java/org/delivery/storeadmin/domain/user/business/StoreUserBusiness.java" beforeDir="false" afterPath="$PROJECT_DIR$/store-admin/src/main/java/org/delivery/storeadmin/domain/storeuser/business/StoreUserBusiness.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/store-admin/src/main/java/org/delivery/storeadmin/domain/user/controller/StoreUserApiController.java" beforeDir="false" afterPath="$PROJECT_DIR$/store-admin/src/main/java/org/delivery/storeadmin/domain/storeuser/controller/StoreUserApiController.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/store-admin/src/main/java/org/delivery/storeadmin/domain/user/controller/StoreUserOpenApiController.java" beforeDir="false" afterPath="$PROJECT_DIR$/store-admin/src/main/java/org/delivery/storeadmin/domain/storeuser/controller/StoreUserOpenApiController.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/store-admin/src/main/java/org/delivery/storeadmin/domain/user/controller/model/StoreUserRegisterRequest.java" beforeDir="false" afterPath="$PROJECT_DIR$/store-admin/src/main/java/org/delivery/storeadmin/domain/storeuser/controller/model/StoreUserRegisterRequest.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/store-admin/src/main/java/org/delivery/storeadmin/domain/user/controller/model/StoreUserResponse.java" beforeDir="false" afterPath="$PROJECT_DIR$/store-admin/src/main/java/org/delivery/storeadmin/domain/storeuser/controller/model/StoreUserResponse.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/store-admin/src/main/java/org/delivery/storeadmin/domain/user/converter/StoreUserConverter.java" beforeDir="false" afterPath="$PROJECT_DIR$/store-admin/src/main/java/org/delivery/storeadmin/domain/storeuser/converter/StoreUserConverter.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/store-admin/src/main/java/org/delivery/storeadmin/domain/user/service/StoreUserService.java" beforeDir="false" afterPath="$PROJECT_DIR$/store-admin/src/main/java/org/delivery/storeadmin/domain/storeuser/service/StoreUserService.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/store-admin/src/main/resources/templates/main.html" beforeDir="false" afterPath="$PROJECT_DIR$/store-admin/src/main/resources/templates/main.html" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -78,24 +43,6 @@
               <path>
                 <item name="" type="6a2764b6:ExternalProjectsStructure$RootNode" />
                 <item name="service" type="f1a62948:ProjectNode" />
-              </path>
-              <path>
-                <item name="" type="6a2764b6:ExternalProjectsStructure$RootNode" />
-                <item name="service" type="f1a62948:ProjectNode" />
-                <item name="api" type="2d1252cf:ModuleNode" />
-              </path>
-              <path>
-                <item name="" type="6a2764b6:ExternalProjectsStructure$RootNode" />
-                <item name="service" type="f1a62948:ProjectNode" />
-                <item name="api" type="2d1252cf:ModuleNode" />
-                <item name="Dependencies" type="6de06a37:ExternalSystemViewDefaultContributor$MyDependenciesNode" />
-              </path>
-              <path>
-                <item name="" type="6a2764b6:ExternalProjectsStructure$RootNode" />
-                <item name="service" type="f1a62948:ProjectNode" />
-                <item name="api" type="2d1252cf:ModuleNode" />
-                <item name="Dependencies" type="6de06a37:ExternalSystemViewDefaultContributor$MyDependenciesNode" />
-                <item name="compileClasspath" type="62daadca:ExternalSystemViewDefaultContributor$DependencyScopeExternalSystemNode" />
               </path>
             </expand>
             <select />
@@ -134,8 +81,8 @@
     &quot;DefaultHtmlFileTemplate&quot;: &quot;HTML File&quot;,
     &quot;Gradle.'service.store-admin'에 있는 테스트.executor&quot;: &quot;Run&quot;,
     &quot;Gradle.service [clean].executor&quot;: &quot;Run&quot;,
-    &quot;Gradle.service:api [:api:ApiApplication.main()].executor&quot;: &quot;Run&quot;,
-    &quot;Gradle.service:store-admin [:store-admin:StoreAdminApplication.main()].executor&quot;: &quot;Run&quot;,
+    &quot;Gradle.service:api [:api:ApiApplication.main()].executor&quot;: &quot;Debug&quot;,
+    &quot;Gradle.service:store-admin [:store-admin:StoreAdminApplication.main()].executor&quot;: &quot;Debug&quot;,
     &quot;RunOnceActivity.OpenProjectViewOnStart&quot;: &quot;true&quot;,
     &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
     &quot;git-widget-placeholder&quot;: &quot;main&quot;,
@@ -145,7 +92,7 @@
     &quot;project.structure.last.edited&quot;: &quot;모듈&quot;,
     &quot;project.structure.proportion&quot;: &quot;0.0&quot;,
     &quot;project.structure.side.proportion&quot;: &quot;0.0&quot;,
-    &quot;settings.editor.selected.configurable&quot;: &quot;preferences.keymap&quot;
+    &quot;settings.editor.selected.configurable&quot;: &quot;preferences.pluginManager&quot;
   }
 }</component>
   <component name="RecentsManager">

@@ -4,6 +4,14 @@
 	(1) delivery.queue를 delivery_queue로 작성하여 RabbitMQ에서 deiivery_queue로 인식되어 매칭이 안됬을 경우
 		- Docker Desktop에서 RabbitMQ 삭제 후 인텔리제이에서 docker compose up -d로 다시 설치.
 		- Docker Desktop에서 rabbitMQ 터미널 열고 rabbitmq-plugins enable rabbitmq_management 명령어로 실행.
+		
+	(2) queue 를 생성할 수 없다는 오류!!
+		1) http://localhost:15672 로 접속(admin / admin123!)
+		2) Exchanges 탭에서 Add exchange -> delivery.key 등록
+		3) Queues and Streams 탭에서 Add queue -> delivery.queue 등록
+		4) Exchanges 탭에서 delivery.key 클릭해서 -> To queue 에 delivery.queue 넣고 Bind
+		5) Queues and Streams 탭에서 Bindings -> From exchange 에 deilvery.key 넣고 Bind
+		6) 인텔리제이에서 store-admin 어플 실행!!
 
 ----------------------------------------------------------------------------------------------------------------------
 6. Consumer 개발하기
@@ -949,8 +957,29 @@
 			}
 			
 		14) 테스트
-			- store-admin 부터 실행, api 실행
-			- 
+			- DBeaver에서 user_order, user_order_menu 테이블 truncate 시키기
+			- store-admin 실행 -> api 실행
+			- 스웨거8080 브라우저와 8081 관리자 페이지 띄우기
+			- 스웨거에서 로그인 후(steve@gmail.com / 1234) order에서 주문
+				  "body": {
+					"store_id": 1,
+					"store_menu_id_list": [
+					  2
+					]
+				  }
+				}
+				1개 주문 후
+					"store_id": 1,
+					"store_menu_id_list": [
+					  1,2
+					]
+				  }
+				}
+				2개 주문
+				
+				-> 8081 사이트 콘솔에서 주문내역 확인가능
+				
+		15) store-admin 모듈에 storeadmin.domain.user 를 storeadmin.domain.storeuser로 이름 변경
 		
 		
 

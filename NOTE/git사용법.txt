@@ -37,3 +37,5 @@
 2. git log --since="5 hours ago" : 5시간 전 커밋 확인
 
 3. git reset --hard abc1234 : 5시간 전 내용으로 되돌리기
+
+4. git push origin main --force-with-lease : 충돌 해결 후 업로드
