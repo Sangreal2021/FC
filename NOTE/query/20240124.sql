@@ -12,9 +12,12 @@ CREATE TABLE IF NOT EXISTS `delivery`.`user_order` (
   `delivery_started_at` DATETIME NULL,
   `received_at` DATETIME NULL,
   PRIMARY KEY (`id`),
-  INDEX `idx_user_id` (`user_id` ASC) VISIBLE
+  INDEX `idx_user_id` (`user_id` ASC) VISIBLE,
+  INDEX `idx_store_id` (`store_id` ASC) VISIBLE
 )
 ENGINE = InnoDB;
+
+DROP TABLE user_order;
 
 SELECT * FROM user_order;
 -- truncate TABLE user_order; 

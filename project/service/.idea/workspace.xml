@@ -5,18 +5,11 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="91da66bb-37ed-4c63-bfdf-a8cb9281c7df" name="변경" comment="">
-      <change beforePath="$PROJECT_DIR$/../../NOTE/git사용법.txt" beforeDir="false" afterPath="$PROJECT_DIR$/../../NOTE/git사용법.txt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../../NOTE/필기/20240131.txt" beforeDir="false" afterPath="$PROJECT_DIR$/../../NOTE/필기/20240131.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../NOTE/query/20240124.sql" beforeDir="false" afterPath="$PROJECT_DIR$/../../NOTE/query/20240124.sql" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../NOTE/query/20240131.sql" beforeDir="false" afterPath="$PROJECT_DIR$/../../NOTE/query/20240131.sql" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../NOTE/필기/20240123.txt" beforeDir="false" afterPath="$PROJECT_DIR$/../../NOTE/필기/20240123.txt" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/store-admin/src/main/java/org/delivery/storeadmin/domain/authorization/AuthorizationService.java" beforeDir="false" afterPath="$PROJECT_DIR$/store-admin/src/main/java/org/delivery/storeadmin/domain/authorization/AuthorizationService.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/store-admin/src/main/java/org/delivery/storeadmin/domain/user/business/StoreUserBusiness.java" beforeDir="false" afterPath="$PROJECT_DIR$/store-admin/src/main/java/org/delivery/storeadmin/domain/storeuser/business/StoreUserBusiness.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/store-admin/src/main/java/org/delivery/storeadmin/domain/user/controller/StoreUserApiController.java" beforeDir="false" afterPath="$PROJECT_DIR$/store-admin/src/main/java/org/delivery/storeadmin/domain/storeuser/controller/StoreUserApiController.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/store-admin/src/main/java/org/delivery/storeadmin/domain/user/controller/StoreUserOpenApiController.java" beforeDir="false" afterPath="$PROJECT_DIR$/store-admin/src/main/java/org/delivery/storeadmin/domain/storeuser/controller/StoreUserOpenApiController.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/store-admin/src/main/java/org/delivery/storeadmin/domain/user/controller/model/StoreUserRegisterRequest.java" beforeDir="false" afterPath="$PROJECT_DIR$/store-admin/src/main/java/org/delivery/storeadmin/domain/storeuser/controller/model/StoreUserRegisterRequest.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/store-admin/src/main/java/org/delivery/storeadmin/domain/user/controller/model/StoreUserResponse.java" beforeDir="false" afterPath="$PROJECT_DIR$/store-admin/src/main/java/org/delivery/storeadmin/domain/storeuser/controller/model/StoreUserResponse.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/store-admin/src/main/java/org/delivery/storeadmin/domain/user/converter/StoreUserConverter.java" beforeDir="false" afterPath="$PROJECT_DIR$/store-admin/src/main/java/org/delivery/storeadmin/domain/storeuser/converter/StoreUserConverter.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/store-admin/src/main/java/org/delivery/storeadmin/domain/user/service/StoreUserService.java" beforeDir="false" afterPath="$PROJECT_DIR$/store-admin/src/main/java/org/delivery/storeadmin/domain/storeuser/service/StoreUserService.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/store-admin/src/main/resources/templates/main.html" beforeDir="false" afterPath="$PROJECT_DIR$/store-admin/src/main/resources/templates/main.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/db/src/main/java/org/delivery/db/storeuser/StoreUserEntity.java" beforeDir="false" afterPath="$PROJECT_DIR$/db/src/main/java/org/delivery/db/storeuser/StoreUserEntity.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -75,26 +68,26 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent">{
-  &quot;keyToString&quot;: {
-    &quot;ASKED_ADD_EXTERNAL_FILES&quot;: &quot;true&quot;,
-    &quot;DefaultHtmlFileTemplate&quot;: &quot;HTML File&quot;,
-    &quot;Gradle.'service.store-admin'에 있는 테스트.executor&quot;: &quot;Run&quot;,
-    &quot;Gradle.service [clean].executor&quot;: &quot;Run&quot;,
-    &quot;Gradle.service:api [:api:ApiApplication.main()].executor&quot;: &quot;Debug&quot;,
-    &quot;Gradle.service:store-admin [:store-admin:StoreAdminApplication.main()].executor&quot;: &quot;Debug&quot;,
-    &quot;RunOnceActivity.OpenProjectViewOnStart&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
-    &quot;git-widget-placeholder&quot;: &quot;main&quot;,
-    &quot;jdk.selected.JAVA_MODULE&quot;: &quot;corretto-11&quot;,
-    &quot;kotlin-language-version-configured&quot;: &quot;true&quot;,
-    &quot;last_opened_file_path&quot;: &quot;D:/private/study/FC/BE/workspace/web/project/service/store-admin/src/main/java/org/delivery/storeadmin/config&quot;,
-    &quot;project.structure.last.edited&quot;: &quot;모듈&quot;,
-    &quot;project.structure.proportion&quot;: &quot;0.0&quot;,
-    &quot;project.structure.side.proportion&quot;: &quot;0.0&quot;,
-    &quot;settings.editor.selected.configurable&quot;: &quot;preferences.pluginManager&quot;
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "ASKED_ADD_EXTERNAL_FILES": "true",
+    "DefaultHtmlFileTemplate": "HTML File",
+    "Gradle.'service.store-admin'에 있는 테스트.executor": "Run",
+    "Gradle.service [clean].executor": "Run",
+    "Gradle.service:api [:api:ApiApplication.main()].executor": "Run",
+    "Gradle.service:store-admin [:store-admin:StoreAdminApplication.main()].executor": "Run",
+    "RunOnceActivity.OpenProjectViewOnStart": "true",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "git-widget-placeholder": "main",
+    "jdk.selected.JAVA_MODULE": "corretto-11",
+    "kotlin-language-version-configured": "true",
+    "last_opened_file_path": "D:/MegaStudy/fastcampus/BE/spring01/project/service",
+    "project.structure.last.edited": "모듈",
+    "project.structure.proportion": "0.0",
+    "project.structure.side.proportion": "0.0",
+    "settings.editor.selected.configurable": "preferences.keymap"
   }
-}</component>
+}]]></component>
   <component name="RecentsManager">
     <key name="CopyFile.RECENT_KEYS">
       <recent name="D:\private\study\FC\BE\workspace\web\project\service\store-admin\src\main\java\org\delivery\storeadmin\config" />
@@ -107,7 +100,7 @@
       <recent name="org.delivery.common" />
     </key>
   </component>
-  <component name="RunManager" selected="애플리케이션.ApiApplication">
+  <component name="RunManager" selected="애플리케이션.StoreAdminApplication">
     <configuration name="ApiApplication" type="Application" factoryName="Application" temporary="true" nameIsGenerated="true">
       <option name="MAIN_CLASS_NAME" value="org.delivery.api.ApiApplication" />
       <module name="service.api.main" />
@@ -190,7 +183,6 @@
   <component name="SharedIndexes">
     <attachedChunks>
       <set>
-        <option value="jdk-11.0.21-corretto-11.0.21-4caba194b151-9f4ef98c" />
         <option value="jdk-11.0.22-corretto-11.0.22-4caba194b151-868cef46" />
       </set>
     </attachedChunks>
