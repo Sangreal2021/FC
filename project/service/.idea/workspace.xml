@@ -4,13 +4,7 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="91da66bb-37ed-4c63-bfdf-a8cb9281c7df" name="변경" comment="">
-      <change beforePath="$PROJECT_DIR$/../../NOTE/query/20240124.sql" beforeDir="false" afterPath="$PROJECT_DIR$/../../NOTE/query/20240124.sql" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../../NOTE/query/20240131.sql" beforeDir="false" afterPath="$PROJECT_DIR$/../../NOTE/query/20240131.sql" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../../NOTE/필기/20240123.txt" beforeDir="false" afterPath="$PROJECT_DIR$/../../NOTE/필기/20240123.txt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/db/src/main/java/org/delivery/db/storeuser/StoreUserEntity.java" beforeDir="false" afterPath="$PROJECT_DIR$/db/src/main/java/org/delivery/db/storeuser/StoreUserEntity.java" afterDir="false" />
-    </list>
+    <list default="true" id="91da66bb-37ed-4c63-bfdf-a8cb9281c7df" name="변경" comment="" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
