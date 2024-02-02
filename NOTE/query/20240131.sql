@@ -104,12 +104,12 @@ ENGINE = InnoDB;
 
 -------------------------------------------------------------
 
-SELECT * FROM store_user;
-SELECT * FROM USER;
-SELECT * FROM store;
-SELECT * FROM store_menu;
+SELECT * FROM user;
 SELECT * FROM user_order;
 SELECT * FROM user_order_menu;
+SELECT * FROM store;
+SELECT * FROM store_menu;
+SELECT * FROM store_user;
 
 
 
