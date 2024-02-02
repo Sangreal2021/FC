@@ -4,7 +4,13 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
+<<<<<<< HEAD
     <list default="true" id="91da66bb-37ed-4c63-bfdf-a8cb9281c7df" name="변경" comment="" />
+=======
+    <list default="true" id="91da66bb-37ed-4c63-bfdf-a8cb9281c7df" name="변경" comment="">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+    </list>
+>>>>>>> da3f5fcc7b5166549de0f2baa359cca6cc6ba556
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -79,7 +85,7 @@
     "project.structure.last.edited": "모듈",
     "project.structure.proportion": "0.0",
     "project.structure.side.proportion": "0.0",
-    "settings.editor.selected.configurable": "preferences.keymap"
+    "settings.editor.selected.configurable": "preferences.pluginManager"
   }
 }]]></component>
   <component name="RecentsManager">
@@ -177,6 +183,7 @@
   <component name="SharedIndexes">
     <attachedChunks>
       <set>
+        <option value="jdk-11.0.21-corretto-11.0.21-4caba194b151-9f4ef98c" />
         <option value="jdk-11.0.22-corretto-11.0.22-4caba194b151-868cef46" />
       </set>
     </attachedChunks>
